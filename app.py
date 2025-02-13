@@ -122,14 +122,16 @@ def separate_thinking_and_response(text: str):
 # 4. Streaming Function to Call Ollama’s API
 # ----------------------------------
 def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
-    """
-    Calls the Ollama API with stream=True so that we can yield parts
-    of the response as they come in using the llama3.1:8b model.
-    """
-    url = "https://b49c-179-214-115-197.ngrok-free.app/api/generate"
-    headers = {"Content-Type": "application/json"}
-    payload = {"model": model, "prompt": prompt}
+    url = "https://b49c-179-214-115-197.ngrok-free.app/api/generate"  # (Use the current ngrok URL)
     
+    headers = {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "1",
+        "User-Agent": "Mozilla/5.0"
+    }
+    
+    payload = {"model": model, "prompt": prompt}
+
     try:
         response = requests.post(url, json=payload, headers=headers, stream=True)
         response.raise_for_status()
