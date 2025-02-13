@@ -126,7 +126,7 @@ def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
     Calls the Ollama API with stream=True so that we can yield parts
     of the response as they come in using the llama3.1:8b model.
     """
-    url = "http://host.docker.internal:11434/api/generate"
+    url = "https://394f-179-214-115-197.ngrok-free.app/api/generate"
     headers = {"Content-Type": "application/json"}
     payload = {"model": model, "prompt": prompt}
     
