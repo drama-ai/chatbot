@@ -144,8 +144,8 @@ def separate_thinking_and_response(text: str):
 # 5. Streaming Function to Call Ollama’s API
 # ----------------------------------
 def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
-    # Use OLLAMA_PUBLIC_URL from environment, fallback to direct local if not set
-    url = os.getenv("OLLAMA_PUBLIC_URL", "http://host.docker.internal:11434/api/generate")
+    # CHANGED: read from st.secrets first, then environment variable, then fallback:
+    url = st.secrets.get("OLLAMA_PUBLIC_URL", os.getenv("OLLAMA_PUBLIC_URL", "http://host.docker.internal:11434/api/generate"))
 
     headers = {
         "Content-Type": "application/json",
@@ -182,7 +182,7 @@ with st.container():
     st.markdown("Each user gets an independent conversation (ephemeral for them, stored in DB).")
     if st.button("Clear Conversation", key="clear"):
         clear_conversation()
-        st.rerun()  # <-- CHANGED from st.experimental_rerun()
+        st.rerun()
 
     # Toggle to show/hide internal thinking
     show_thinking = st.checkbox("Show internal thinking", value=False)

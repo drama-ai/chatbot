@@ -2,14 +2,11 @@
 set -e
 
 ########################################
-# Kill any processes using port 11434 (if any)
+# Kill leftover processes that might conflict
 ########################################
 echo "[local_run.sh] Checking and killing any processes using port 11434..."
 lsof -ti tcp:11434 | xargs kill -9 2>/dev/null || echo "[local_run.sh] No process using port 11434 found."
 
-########################################
-# Kill any existing ngrok processes (optional, to avoid conflicts)
-########################################
 echo "[local_run.sh] Killing any existing ngrok processes..."
 pkill ngrok 2>/dev/null || echo "[local_run.sh] No ngrok process found."
 
@@ -17,7 +14,8 @@ pkill ngrok 2>/dev/null || echo "[local_run.sh] No ngrok process found."
 # 1) Start Ollama in the background
 ########################################
 echo "[local_run.sh] Starting Ollama on port 11434..."
-ollama serve &   # Ollama defaults to port 11434; no -p flag needed
+# Ollama defaults to port 11434, no '-p' flag needed
+ollama serve &
 
 ########################################
 # 2) Start ngrok locally to tunnel port 11434
@@ -32,7 +30,6 @@ sleep 5
 # 3) Grab the public ngrok URL
 ########################################
 TUNNEL_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | jq -r .tunnels[0].public_url)
-
 if [ -z "$TUNNEL_URL" ] || [ "$TUNNEL_URL" = "null" ]; then
   echo "[local_run.sh] ERROR: Could not retrieve ngrok tunnel URL!"
   cat /tmp/ngrok.log
