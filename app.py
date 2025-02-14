@@ -182,7 +182,7 @@ with st.container():
     st.markdown("Each user gets an independent conversation (ephemeral for them, stored in DB).")
     if st.button("Clear Conversation", key="clear"):
         clear_conversation()
-        st.experimental_rerun()
+        st.rerun()  # <-- CHANGED from st.experimental_rerun()
 
     # Toggle to show/hide internal thinking
     show_thinking = st.checkbox("Show internal thinking", value=False)
@@ -224,7 +224,7 @@ if submit_button and user_input:
 
     # Save the final assistant response
     add_message("assistant", final_stream_response)
-    st.experimental_rerun()
+    st.rerun()
 
 # ----------------------------------
 # 8. Conversation History Display

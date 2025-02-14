@@ -1,30 +1,31 @@
-# Use a slim Python 3.9 base (works on Apple Silicon via Docker buildx if needed)
+# Dockerfile
 FROM python:3.9-slim
 
-# Update system packages and install needed tools
+# 1) Install needed system packages
 RUN apt-get update && apt-get install -y \
     wget curl jq \
  && rm -rf /var/lib/apt/lists/*
 
-# Create a working directory
+# 2) Create and switch to /app
 WORKDIR /app
 
-# Copy requirements.txt and install dependencies
+# 3) Copy requirements and install dependencies
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install ngrok (Linux AMD64). For Apple Silicon cross-compile, see notes below.
+# 4) Install ngrok v3
 RUN wget -O /tmp/ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz \
     && tar -C /usr/local/bin -xzf /tmp/ngrok.tgz
 
-# Copy remaining project files
+# 5) Copy the rest of your code into /app
 COPY . /app
 
-# Make start.sh executable
+# 6) Make start.sh executable
 RUN chmod +x /app/start.sh
 
-# Expose Streamlit's default port
+# 7) Expose Streamlit’s default port
 EXPOSE 8501
 
-# Default command: run our startup script
+# 8) Default command: run the startup script
 CMD ["/app/start.sh"]
