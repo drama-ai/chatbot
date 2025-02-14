@@ -146,7 +146,7 @@ def separate_thinking_and_response(text: str):
 def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
     # Use OLLAMA_PUBLIC_URL from environment, fallback to direct local if not set
     url = os.getenv("OLLAMA_PUBLIC_URL", "http://host.docker.internal:11434/api/generate")
-    
+
     headers = {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "1",
