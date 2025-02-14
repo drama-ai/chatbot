@@ -122,7 +122,7 @@ def separate_thinking_and_response(text: str):
 # 4. Streaming Function to Call Ollama’s API
 # ----------------------------------
 def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
-    url = "https://b49c-179-214-115-197.ngrok-free.app/api/generate"  # (Use the current ngrok URL)
+    url = "https://f04f-179-214-115-197.ngrok-free.app/api/generate"  # (Use the current ngrok URL)
     
     headers = {
         "Content-Type": "application/json",
