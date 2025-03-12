@@ -144,13 +144,25 @@ def separate_thinking_and_response(text: str):
 # 5. Streaming Function to Call Ollama’s API
 # ----------------------------------
 def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
-    # CHANGED: read from st.secrets first, then environment variable, then fallback:
-    url = st.secrets.get("OLLAMA_PUBLIC_URL", os.getenv("OLLAMA_PUBLIC_URL", "http://host.docker.internal:11434/api/generate"))
-
+    # Read from st.secrets first, then environment variable, then fallback:
+    url = st.secrets.get("OLLAMA_PUBLIC_URL", os.getenv("OLLAMA_PUBLIC_URL", "http://127.0.0.1:11435/api/generate"))
+    
+    # Updated headers to mimic a browser request
     headers = {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "1",
-        "User-Agent": "Mozilla/5.0"
+        "ngrok-skip-browser-warning": "true",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Origin": "http://localhost:8501",
+        "Referer": "http://localhost:8501/",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
+        "X-Requested-With": "XMLHttpRequest"
     }
 
     payload = {"model": model, "prompt": prompt}

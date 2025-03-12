@@ -2,53 +2,46 @@
 set -e
 
 ########################################
-# Kill leftover processes that might conflict
+# 1) Clean up leftover processes
 ########################################
-echo "[local_run.sh] Checking and killing any processes using port 11434..."
-lsof -ti tcp:11434 | xargs kill -9 2>/dev/null || echo "[local_run.sh] No process using port 11434 found."
+echo "[local_run.sh] Killing leftover processes (ollama, nginx, cloudflared)..."
+pkill -f ollama || echo "[local_run.sh] No existing ollama process found."
+pkill -f nginx || echo "[local_run.sh] No existing nginx process found."
+pkill -f cloudflared || echo "[local_run.sh] No existing cloudflared process found."
 
-echo "[local_run.sh] Killing any existing ngrok processes..."
-pkill ngrok 2>/dev/null || echo "[local_run.sh] No ngrok process found."
+echo "[local_run.sh] Checking if anything is using port 11434 or 11435..."
+lsof -i :11434 | grep LISTEN && echo "[local_run.sh] Port 11434 is in use; attempting to kill..." && lsof -t -i :11434 | xargs sudo kill -9 || echo "[local_run.sh] Port 11434 is free."
+lsof -i :11435 | grep LISTEN && echo "[local_run.sh] Port 11435 is in use; attempting to kill..." && lsof -t -i :11435 | xargs sudo kill -9 || echo "[local_run.sh] Port 11435 is free."
 
 ########################################
-# 1) Start Ollama in the background
+# 2) Start Ollama on port 11434
 ########################################
 echo "[local_run.sh] Starting Ollama on port 11434..."
-# Ollama defaults to port 11434, no '-p' flag needed
+# We leave OLLAMA_ORIGINS blank since Nginx will rewrite the Host header.
+export OLLAMA_ORIGINS=""
 ollama serve &
+# Give Ollama a moment to start
+sleep 3
 
 ########################################
-# 2) Start ngrok locally to tunnel port 11434
+# 3) Start system Nginx
 ########################################
-echo "[local_run.sh] Starting ngrok to tunnel port 11434..."
-ngrok http 11434 --log=stdout --log-format=json > /tmp/ngrok.log 2>&1 &
+echo "[local_run.sh] Starting (or reloading) system Nginx..."
+# This assumes your system Nginx is already configured to proxy from port 11435 to 11434 with:
+#   proxy_pass http://127.0.0.1:11434;
+#   proxy_set_header Host localhost;
+sudo nginx -s reload || sudo nginx
 
-# Give ngrok time to initialize
+########################################
+# 4) Start Cloudflare Tunnel (using your existing configuration)
+########################################
+echo "[local_run.sh] Starting Cloudflare Tunnel..."
+cloudflared tunnel run ollama-tunnel &
+# Give Cloudflare Tunnel a moment to initialize
 sleep 5
 
 ########################################
-# 3) Grab the public ngrok URL
+# 5) Start the Streamlit app directly
 ########################################
-TUNNEL_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | jq -r .tunnels[0].public_url)
-if [ -z "$TUNNEL_URL" ] || [ "$TUNNEL_URL" = "null" ]; then
-  echo "[local_run.sh] ERROR: Could not retrieve ngrok tunnel URL!"
-  cat /tmp/ngrok.log
-  exit 1
-fi
-
-echo "[local_run.sh] ngrok public URL: $TUNNEL_URL"
-
-########################################
-# 4) Build your Docker image
-########################################
-echo "[local_run.sh] Building Docker image..."
-docker build -t chatbot-ngrok .
-
-########################################
-# 5) Run the Docker container, passing the ngrok URL via OLLAMA_PUBLIC_URL
-########################################
-echo "[local_run.sh] Running Docker container..."
-docker run --rm -p 8501:8501 \
-  -e OLLAMA_PUBLIC_URL="${TUNNEL_URL}/api/generate" \
-  --name chatbot-ngrok \
-  chatbot-ngrok
+echo "[local_run.sh] Starting Streamlit app..."
+streamlit run app.py --server.port=8501 --server.address=0.0.0.0
