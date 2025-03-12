@@ -1,0 +1,135 @@
+/* -------------------------
+   GLOBAL PAGE & BODY
+-------------------------- */
+html, body, [data-testid="stAppViewContainer"] {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff !important; /* Entire page is white */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  /* Hide default Streamlit UI elements */
+  #MainMenu {visibility: hidden;}
+  footer {visibility: hidden;}
+  .stDeployButton {display:none;}
+  
+  /* -------------------------
+     HEADER-LEFT CORNER
+     "E-CO" + "O que é a E-CO"
+  -------------------------- */
+  .header-left {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: #000;
+    font-family: 'Arial Black', sans-serif;
+  }
+  
+  .header-left h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: bold;
+  }
+  
+  .header-left p {
+    margin: 5px 0 0 0;
+    font-size: 14px;
+    font-weight: normal;
+    background-color: black;
+    color: white;
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 15px;
+  }
+  
+  /* -------------------------
+     MAIN CONTENT
+  -------------------------- */
+  .main-content {
+    /* Provide some top padding so it doesn't collide with the absolute header */
+    padding-top: 100px;
+    min-height: 100vh; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative; /* So the header-left stays above if needed */
+  }
+  
+  /* Title & Subtitle inside the main content */
+  .main-title {
+    font-family: 'Courier New', monospace;
+    font-size: 36px;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+  
+  .main-subtitle {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  
+  /* Avatar styling */
+  .avatar-img {
+    width: 100px;
+    height: auto;
+    display: block;
+    margin: 0 auto 10px auto;
+  }
+  
+  /* -------------------------
+     INPUT AREA & BUTTONS
+  -------------------------- */
+  .input-area {
+    background-color: #f2f0f2;
+    border-radius: 15px;
+    padding: 20px;
+    width: 80%;
+    max-width: 600px;
+    margin-bottom: 20px;
+  }
+  
+  .button-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+  }
+  
+  .fortune-btn {
+    background-color: white;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 15px;
+    padding: 8px 15px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+  }
+  
+  .search-btn {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 15px;
+    padding: 8px 15px;
+    cursor: pointer;
+  }
+  
+  /* -------------------------
+     RESPONSE MESSAGE
+  -------------------------- */
+  .chat-message {
+    background-color: #f2f0f2;
+    border-radius: 15px;
+    padding: 10px;
+    margin-bottom: 10px;
+    width: 80%;
+    max-width: 600px;
+    word-wrap: break-word;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+  }
