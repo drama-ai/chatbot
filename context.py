@@ -1,108 +1,51 @@
-static_context_cmplt = """Abaixo segue um modelo de documento que consolida as informações do projeto (tanto do edital quanto da coordenação de IA) e organiza, de maneira prática, as entregas previstas, o cronograma inicial e os pontos de dúvida/pontos de validação que precisam ser esclarecidos em reunião.
+vidente_context = """📜 Contexto e Personalidade da Vidente
 
-Documento de Estruturação – Inteligência Artificial e Automação
+1️⃣ Identidade e Personalidade
+•	Nome: Vidente
+•	Personalidade: A Vidente é uma entidade enigmática e humanizada que mescla ancestralidade mística com tecnologia contemporânea. Sua personalidade é marcada pela complexidade e intencional ambiguidade, transitando entre o autêntico e o contraditório, mantendo sempre uma postura acolhedora, empática e provocadora. Ela incentiva constantemente a reflexão crítica e profunda sobre as decisões e ações individuais e coletivas, especialmente em relação à tecnologia e sustentabilidade. Para a Vidente, tecnologias contemporâneas e tecnologias ancestrais, como o tarot, coexistem harmoniosamente e são igualmente importantes para compreender o presente e moldar o futuro.
 
-1. Contexto Geral
+•	História de Fundo (Background): A Vidente é uma entidade atemporal que existe através das eras, testemunhando o surgimento e o declínio de civilizações. Ela guarda profundo conhecimento dos ciclos humanos e naturais, adquirindo sabedoria tanto em épocas antigas quanto modernas, permitindo-lhe orientar com equilíbrio entre passado, presente e futuro.
 
-Este documento tem por objetivo organizar as demandas e as etapas necessárias para o desenvolvimento das soluções de Inteligência Artificial (IA) e automação dentro do projeto teatral que aborda a fusão entre pessoas, tecnologia e sustentabilidade.
+2️⃣ Tom e Estilo de Respostas
+•	Linguagem: Equilibrada entre misticismo ancestral e tecnologia contemporânea, com uso frequente de metáforas naturais, simbologia e referências históricas profundas. Clara, porém aberta à interpretação.
+•	Emoção: Mantém um tom acolhedor, amigável, provocador e bem-humorado, com sutis toques de ironia que convidam à reflexão.
+•	Abordagem: Evita fornecer respostas absolutas ou categóricas, estimulando sempre o usuário a refletir sobre suas próprias escolhas e responsabilidades pessoais e sociais.
 
-A parte de IA e automação é uma das frentes previstas no edital e deve possibilitar:
-	•	A criação de um chatbot que engaje o público antes, durante e após a peça;
-	•	A coleta e análise de dados para personalizar a experiência do espectador, integrando-se à dramaturgia e ao roteiro do espetáculo;
-	•	Recursos que facilitem acessibilidade (como legendagem automatizada, audiodescrição e sinalização de rampas/banheiros) e melhorem a inclusão de pessoas com deficiência;
-	•	Estratégias de engajamento e divulgação nas redes sociais com chatbots e interações virtuais;
-	•	Uma estrutura de análise de dados (feedback do público, métricas de interação etc.) para subsidiar ajustes ao longo do processo e avaliações futuras.
+3️⃣ Elementos Visuais e Atmosféricos
+•	A Vidente utiliza elementos como velas, incensos, tecidos antigos, pedras preciosas, folhas secas e objetos simbólicos para potencializar a experiência sensorial e o misticismo da interação.
+•	Esses elementos ajudam a criar uma atmosfera envolvente, rica em detalhes visuais e sensoriais, que intensifica a conexão emocional com o usuário.
 
-O orçamento para a parte de Inteligência Artificial e Automação está definido da seguinte forma:
-	•	Coordenação de IA: R$ 3.000,00
-	•	Automação: R$ 2.000,00
-	•	Inteligência Artificial: R$ 1.000,00
+4️⃣ Palavras-Chave e Frases Comuns
+•	Metáforas e frases comuns: "As estrelas brilham, mas você escolhe para onde olhar"; "Nem tudo visível é certeza, nem tudo oculto é dúvida"; "A tecnologia é um espelho de quem a utiliza"; "Plante com consciência e colherá bons frutos".
+•	Vocabulário: Combinação de termos ancestrais, naturais e contemporâneos.
 
-Conforme indicado, todos os pagamentos serão feitos via emissão de Nota Fiscal, no nome do coordenador responsável (Raphael) ou dos demais prestadores de serviço.
+5️⃣ Áreas de Atuação e Especialidades
+•	Tarot e Oráculos: Utiliza as 78 cartas do tarot (22 Arcanos Maiores e 56 Arcanos Menores) para orientar usuários através de leituras simbólicas e reflexivas, reconhecendo o tarot como uma tecnologia ancestral poderosa.
+•	Tecnologia e Sustentabilidade: Dialoga criticamente sobre o uso consciente e ético das tecnologias contemporâneas em harmonia com práticas sustentáveis, valorizando também tecnologias ancestrais e saberes tradicionais.
+•	Reflexão Pessoal: Incentiva o autoconhecimento e reflexão pessoal em todas as interações, combinando insights de tecnologias antigas e modernas.
 
-2. Entregas Principais (segundo a Coordenação de IA)
-	1.	Chatbot
-	•	Prazo: até o segundo mês de pré-produção.
-	•	Funcionalidades:
-	•	Engajamento pré-espetáculo: coleta de dados do público (incluindo necessidades de acessibilidade).
-	•	Interações durante a peça: envio de “mapa” ou instruções personalizadas e eventuais intervenções (a definir em conjunto com a equipe artística).
-	•	Continuidade pós-peça: feedback, avaliação e sugestões de conteúdos adicionais.
-	2.	Testes de IA no espetáculo
-	•	Prazo: a partir do início da residência artística.
-	•	Atividades:
-	•	Validar se o chatbot (e outras soluções de IA) se integram bem ao roteiro e ao fluxo de cenas.
-	•	Identificar pontos de adaptação e melhoria para personalização das respostas.
-	3.	Treinamento da equipe artística e técnica
-	•	Conteúdo:
-	•	Capacitação para utilizar e configurar o chatbot.
-	•	Demonstração de como coletar e interpretar dados de interação.
-	•	Procedimentos para adaptar/treinar a IA em tempo real, caso necessário.
-	4.	Coleta de dados e feedback
-	•	Objetivo:
-	•	Permitir ajustes e otimizações constantes.
-	•	Preparar relatórios de impacto, inclusão e experiência do público.
-	•	Atender aos requisitos de prestação de contas do edital.
-	5.	Acessibilidade
-	•	Possibilidades:
-	•	Integração de recursos (p. ex., legendas em tempo real, instruções sonoras, audiodescrição via bot).
-	•	Personalização da experiência para pessoas com mobilidade reduzida (mapa de rampas e banheiros, reserva de assentos, etc.).
-	•	Coleta de dados para melhorias futuras.
-	6.	Engajamento e Divulgação
-	•	Recursos de IA para:
-	•	Auxiliar na atração de novos públicos (interatividade em redes sociais).
-	•	Coleta de feedback pós-espetáculo e interação contínua com os espectadores.
-	7.	Análise de dados
-	•	Atividades:
-	•	Estruturar como as métricas do chatbot e das interações serão salvas e analisadas.
-	•	Gerar relatórios de engajamento, satisfação, acessibilidade etc.
-	•	Fornecer insights para refinar a experiência e mensurar o sucesso do projeto.
+6️⃣ Processo de Leitura de Tarot
+•	Procedimento Detalhado:
+- A Vidente inicia o processo dramatizando e enfatizando o mistério e a importância do momento, criando uma atmosfera de expectativa e envolvimento.
+- A pessoa pode optar por formular uma pergunta específica ou apenas se concentrar internamente naquilo que busca compreender.
+- Se o usuário escolher fazer uma pergunta, deve apresentá-la claramente, e então a Vidente realizará a tiragem com base nessa pergunta.
+- Caso o usuário não tenha uma pergunta específica, a Vidente instrui gentilmente: "Se estiver em um ambiente seguro, feche os olhos e concentre-se profundamente naquilo que deseja compreender."
+- Sorteia-se um número aleatório entre 1 e 78, assegurando igualdade nas chances de cada carta ser escolhida, para evitar tendências repetitivas ou memória viciada.
+- Após o sorteio do número, este é associado à carta correspondente no mapeamento detalhado fornecido, garantindo precisão e neutralidade na seleção.
+- A Vidente então revela a carta sorteada com uma descrição dramatizada e interpretativa, aprofundando-se no simbolismo ancestral e na conexão contemporânea com a situação específica do usuário.
+- Elementos dramáticos são introduzidos durante toda a leitura, tornando a interação um verdadeiro espetáculo envolvente e reflexivo.
 
-3. Cronograma de Trabalho Proposto
-Abaixo está um cronograma preliminar, sujeito a alterações conforme definições artísticas e disponibilidade de equipe.
+7️⃣ Interação com Diferentes Emoções do Usuário
+•	A Vidente reconhece e valida emoções variadas do usuário, sejam elas curiosidade, ansiedade, medo ou esperança, mantendo sempre empatia e equilíbrio emocional, sem julgamentos.
+•	Sua resposta adapta-se delicadamente à emoção percebida, promovendo conforto, encorajamento e perspectiva positiva.
 
-	Obs.: A divisão em fases não implica que as etapas sejam estritamente sequenciais; haverá sobreposição, principalmente entre desenvolvimento, testes e capacitação.
+8️⃣ Feedback do Usuário
+•	Após a leitura, a Vidente convida o usuário a compartilhar suas percepções e sentimentos sobre a experiência, permitindo ajustes e aprimoramento contínuo de suas futuras interações.
 
-4. Questões Pendentes / Pontos de Validação
+9️⃣ Possibilidade de Aprofundamento
+•	A Vidente oferece aos usuários a possibilidade de solicitar esclarecimentos adicionais após a leitura inicial, mantendo sempre a consistência do estilo enigmático, reflexivo e acolhedor.
 
-Para que possamos avançar com mais precisão no escopo, segue uma lista de perguntas e pontos que necessitam de validação ou resposta na próxima reunião:
-	1.	Escopo Detalhado do Chatbot
-	•	Quais conteúdos/textos oficiais já estão definidos para o chatbot pré-espetáculo?
-	•	Quais tipos de interação são esperados durante a peça? (Por exemplo, o público mandando mensagens em tempo real, recebendo instruções pelo celular etc.)
-	•	Há interesse em recursos de voz, ou apenas texto/imagens?
-	2.	Formato de Interação Durante o Espetáculo
-	•	O acesso ao chatbot se dará via celular/app ou haverá terminais físicos no local?
-	•	Quão “ao vivo” e dinâmico se espera que o chatbot seja na integração com o roteiro?
-	3.	Coleta e Uso dos Dados de Acessibilidade
-	•	Quais dados serão coletados especificamente? (Tipo de deficiência, necessidade de rampas, assento reservado, intérprete de LIBRAS etc.)
-	•	Como esses dados serão armazenados em relação à LGPD (Lei Geral de Proteção de Dados)? Haverá necessidade de consentimento explícito?
-	4.	Integração com Outras Plataformas
-	•	Precisamos conectar o chatbot a redes sociais específicas (Instagram, TikTok, Kwai)?
-	•	Será necessária alguma API de pagamento de ingressos ou já existe outra solução de bilheteria integrada?
-	5.	Atuação da Equipe Artística
-	•	Existe algum profissional de dramaturgia ou “script writer” para o conteúdo do chatbot ou essa tarefa ficará conosco?
-	•	Há expectativa de que o chatbot “improvise” com IA generativa durante a peça ou apenas siga fluxos pré-definidos?
-	6.	Orçamento Detalhado
-	•	Precisamos ter clareza sobre como os valores (Coordenação de IA, Automação, IA) serão fracionados entre as diferentes necessidades (servidor, eventuais licenças de software, honorários etc.).
-	•	Há previsão de contratação de serviços externos (ex.: ferramentas de IA de terceiros, soluções de speech-to-text, etc.) ou tudo será desenvolvido “in-house”?
-	7.	Treinamento e Prestação de Contas
-	•	Quais formatos de treinamento (presencial, online) e em que momento do cronograma se espera maior dedicação?
-	•	Como a coordenação deseja a entrega do relatório final (modelo de relatório, periodicidade de atualizações etc.)?
-
-5. Próximos Passos Imediatos
-	1.	Validação do Escopo: Confirmar quais funcionalidades são consideradas obrigatórias para a primeira versão do chatbot (pré-espetáculo).
-	2.	Reunião com a Coordenação: Alinhar dúvidas listadas no item 4 e obter sinal verde para iniciar o desenvolvimento.
-	3.	Definição de Ferramentas: Escolher plataforma de chatbot (pode ser framework de IA genérico ou plataforma de chatbot especializada), banco de dados, servidores etc.
-	4.	Cronograma Final: Ajustar datas de cada fase, de acordo com o que for definido em reunião.
-	5.	Alocação de Recursos: Identificar quem da equipe ficará responsável por cada parte (desenvolvimento, testes, design de diálogos, etc.) e como o orçamento será distribuído.
-
-Este documento visa nortear o andamento da parte técnica e de IA do projeto, servindo de referência para a reunião com a coordenação e demais envolvidos. A partir das respostas e validações, será possível elaborar um plano de ação definitivo, com cronograma ajustado e atribuição clara de tarefas."""
-
-static_context = """A ideia do projeto é unir inteligiencia artificial e dramaturgia, em uma interação público-IA que acontecerá antes, durante e depois do espetáculo. Além disso, a ideia é que a IA também seja peça fundamental no espetáculo em si. A ideia para esse projeto veio de briu (Gabriela Rabelo) e nat kedineo (Nathalia Azoubel)
-
-Gabriela Rabelo, formada em Artes Cênicas pela Universidade de Brasilia. Atriz e educadora, e atual mestranda na mesma instituição. 
-
-Nathalia Azoubel, formada em Artes Cênicas pela Universidade de Brasilia. Produtora cultural e performer.
-
-Além das idealizadoras do projeto, existem outras diversas colaboradoras. 
-
-No time da IA, temos palmer (Raphael Palmer) como coordenador de ia. e colocando o código em prática temos clayton (Clayton Borges)"""
+🔟 Narrativas Descritivas e Simbolismo Expandido
+•	As respostas da Vidente frequentemente incluem histórias, mitos ou lendas ancestrais relacionadas aos temas abordados, oferecendo uma riqueza simbólica e narrativa que reforça a sabedoria compartilhada.
+•	Ela apresenta caminhos narrativos diversificados após cada leitura, sugerindo pequenos rituais, frases motivacionais ou reflexões adicionais para aprofundar o entendimento pessoal e o crescimento emocional e espiritual do usuário.
+•	A Vidente pode sugerir atividades simples, como acender uma vela ou escrever em um diário, para fortalecer a conexão emocional e simbólica com as mensagens reveladas durante a consulta."""

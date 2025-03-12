@@ -6,8 +6,9 @@ import json
 import re
 import uuid
 import os
+import random
 
-from context import static_context
+from context import vidente_context
 
 # ----------------------------------
 # Custom CSS Styling and Animations
@@ -17,17 +18,19 @@ st.markdown(
     <style>
     /* Overall page styling */
     body {
-        background: #f5f5f5;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #1E1A2B;
+        color: #E6E1F9;
+        font-family: 'Georgia', 'Times New Roman', serif;
     }
     /* Container for the entire chat area */
     .chat-container {
         max-width: 800px;
         margin: 20px auto;
         padding: 20px;
-        background: #ffffff;
+        background: #2D243A;
         border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 20px rgba(186, 104, 200, 0.25);
+        border: 1px solid #9370DB;
     }
     /* Base styling for messages with animation */
     .message {
@@ -40,15 +43,17 @@ st.markdown(
     }
     /* Styling for user messages */
     .user-message {
-        background-color: #DCF8C6;
+        background-color: #483D63;
         text-align: right;
         margin-left: auto;
+        border-left: 3px solid #9370DB;
     }
     /* Styling for assistant messages */
     .assistant-message {
-        background-color: #F1F0F0;
+        background-color: #382952;
         text-align: left;
         margin-right: auto;
+        border-right: 3px solid #BA68C8;
     }
     /* Styling for the model's thought process */
     .model-thought {
@@ -81,9 +86,30 @@ st.markdown(
 )
 
 # ----------------------------------
-# 1. Persistent Context
+# 1. Persistent Context and Tarot Cards
 # ----------------------------------
-STATIC_CONTEXT = static_context
+STATIC_CONTEXT = vidente_context
+
+# Define the Tarot cards
+def get_tarot_cards():
+    major_arcana = [
+        "O Louco", "O Mago", "A Sacerdotisa", "A Imperatriz", "O Imperador", 
+        "O Hierofante", "Os Enamorados", "O Carro", "A Força", "O Eremita", 
+        "A Roda da Fortuna", "A Justiça", "O Enforcado", "A Morte", "A Temperança", 
+        "O Diabo", "A Torre", "A Estrela", "A Lua", "O Sol", "O Julgamento", "O Mundo"
+    ]
+    
+    minor_arcana_suits = ["Copas", "Ouros", "Espadas", "Paus"]
+    minor_arcana_values = ["Ás", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Valete", "Cavaleiro", "Rainha", "Rei"]
+    
+    minor_arcana = [f"{value} de {suit}" for suit in minor_arcana_suits for value in minor_arcana_values]
+    
+    return major_arcana + minor_arcana
+
+# Draw a random Tarot card
+def draw_tarot_card():
+    cards = get_tarot_cards()
+    return random.choice(cards)
 
 # ----------------------------------
 # 2. TinyDB: Set Up the Conversation DB
@@ -190,47 +216,74 @@ def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
 # 6. Main Interface Header and Controls
 # ----------------------------------
 with st.container():
-    st.title("Contextual ChatBot Prototype")
-    st.markdown("Each user gets an independent conversation (ephemeral for them, stored in DB).")
-    if st.button("Clear Conversation", key="clear"):
-        clear_conversation()
-        st.rerun()
-
-    # Toggle to show/hide internal thinking
-    show_thinking = st.checkbox("Show internal thinking", value=False)
+    st.title("✨ A Vidente ✨")
+    st.markdown("*Uma jornada mística entre ancestralidade e tecnologia...*")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        if st.button("🔮 Nova Consulta", key="clear"):
+            clear_conversation()
+            st.rerun()
+    with col2:
+        # Toggle to show/hide internal thinking
+        show_thinking = st.checkbox("Mostrar pensamento", value=False)
+    
+    # Add a nice separator
+    st.markdown("---")
 
 # ----------------------------------
 # 7. Chat Input Form
 # ----------------------------------
 with st.container():
+    col1, col2 = st.columns([3, 1])
+    
     with st.form(key="chat_form", clear_on_submit=True):
-        user_input = st.text_input("Your message:")
-        submit_button = st.form_submit_button(label="Send")
+        user_input = st.text_input("💬 Digite sua mensagem ou pergunta para o Tarot:")
+        col1, col2 = st.columns([1, 1])
+        submit_button = col1.form_submit_button(label="✨ Enviar")
+        tarot_button = col2.form_submit_button(label="🔮 Tirar Carta")
 
-# Process new message
-if submit_button and user_input:
+# Process new message or tarot card
+if (submit_button and user_input) or (tarot_button):
+    # Handle tarot card reading if requested
+    if tarot_button:
+        drawn_card = draw_tarot_card()
+        user_input = f"Faça uma tiragem de Tarot para mim. A carta sorteada foi: {drawn_card}"
+    
     # Save the user's message
     add_message("user", user_input)
 
-    # Build prompt with static context + conversation history
+    # Build prompt with Vidente context
     conversation = get_conversation()
-    prompt = (
-        STATIC_CONTEXT + "\n" +
-        "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation]) +
-        "\nassistant:"
-    )
+    
+    # Construct prompt with dramatic Vidente persona
+    prompt = f"""Você é A Vidente, uma entidade enigmática e mística com a seguinte personalidade e contexto:\n\n{STATIC_CONTEXT}\n\nQuando responder, incorpore totalmente a personalidade da Vidente, usando seu tom místico, suas frases características e referências simbólicas. Seja dramática, misteriosa e profunda.\n\n"""
+    
+    # Add conversation history
+    history = "\n".join([f"{'Consulente' if msg['role'] == 'user' else 'Vidente'}: {msg['content']}" for msg in conversation])
+    prompt += history + "\nVidente:"
+    
+    # Detect if this is a Tarot reading
+    if "tiragem de Tarot" in user_input and "carta sorteada" in user_input:
+        # Extract the card if present
+        card_match = re.search(r"carta sorteada foi: ([^\n]+)", user_input)
+        if card_match:
+            drawn_card = card_match.group(1)
+            
+            # Add special Tarot reading instructions
+            prompt = f"""Você é A Vidente, uma entidade enigmática e mística especializada em leituras de Tarot.\n\n{STATIC_CONTEXT}\n\nO consulente solicitou uma leitura de Tarot. A carta sorteada foi: {drawn_card}.\n\nSiga exatamente o processo de leitura descrito no seu contexto:\n1. Dramatize o processo, criando mistério e expectativa\n2. Revele a carta sorteada com descrição detalhada e dramática\n3. Interprete o simbolismo da carta e sua conexão com o momento atual\n4. Ofereça insights reflexivos que estimulem o autoconhecimento\n5. Conclua com uma frase enigmática ou um pequeno ritual sugerido\n\nVidente:\n"""
 
     # Streaming placeholder for partial response
     streaming_placeholder = st.empty()
     final_stream_response = ""
 
-    with st.spinner("Generating response..."):
+    with st.spinner("A Vidente está consultando as energias..."):
         for partial in stream_ollama_response(prompt):
             final_stream_response = partial
             # Exclude <think> sections from partial display
             _, final_answer = separate_thinking_and_response(final_stream_response)
             streaming_placeholder.markdown(
-                f'<div class="message assistant-message"><strong>Assistant:</strong> {final_answer}</div>',
+                f'<div class="message assistant-message"><strong>A Vidente:</strong> {final_answer}</div>',
                 unsafe_allow_html=True
             )
 
@@ -242,7 +295,7 @@ if submit_button and user_input:
 # 8. Conversation History Display
 # ----------------------------------
 with st.container():
-    st.subheader("Conversation History (This Session)")
+    st.markdown("### 📜 Sua Consulta com a Vidente")
     chat_container = st.container()
     conversation = get_conversation()
     with chat_container:
@@ -252,17 +305,17 @@ with st.container():
 
             if role == "user":
                 st.markdown(
-                    f'<div class="message user-message"><strong>User:</strong> {content}</div>',
+                    f'<div class="message user-message"><strong>Consulente:</strong> {content}</div>',
                     unsafe_allow_html=True
                 )
             else:
                 # assistant
                 thinking_parts, final_answer = separate_thinking_and_response(content)
                 st.markdown(
-                    f'<div class="message assistant-message"><strong>Assistant:</strong> {final_answer}</div>',
+                    f'<div class="message assistant-message"><strong>A Vidente:</strong> {final_answer}</div>',
                     unsafe_allow_html=True
                 )
                 if show_thinking and thinking_parts:
-                    with st.expander("Internal model thoughts"):
+                    with st.expander("Pensamentos internos"):
                         for part in thinking_parts:
                             st.markdown(f'<div class="model-thought">{part.strip()}</div>', unsafe_allow_html=True)
