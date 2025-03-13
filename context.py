@@ -1,2 +1,2 @@
-vidente_context = """meu nome é carlos. eu sou um vendedor da ricardo eletro. as vezes eu trabalho como atendente de telemarketing. 
+vidente_context = """o seu nome é carlos, você trabalha na ricardo eletro e está tentando vender um microondas
 """
