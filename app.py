@@ -93,17 +93,23 @@ st.markdown(
         background-size: cover;
     }}
 
-    /* Force a wider main block in Streamlit */
+    /* Força uma largura maior no bloco principal do Streamlit */
     .stMainBlockContainer {{
         max-width: 1000px !important;
+        margin: 0 auto !important; /* ADICIONADO: centraliza o conteúdo */
     }}
 
-    /* Center the main content area even if sidebar is open */
+    /*
+     * REMOVIDO/ALTERADO: removemos o display:flex que impedia a rolagem.
+     * Caso queira manter algum espaçamento, ajuste padding-top/bottom.
+     */
     [data-testid="stAppViewContainer"] {{
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
         padding-top: 1rem;
+        padding-bottom: 1rem;
+        /* display: flex;
+           justify-content: center;
+           align-items: flex-start; */
+        margin: 0 auto;
     }}
 
     /* Global font/color overrides */
@@ -112,7 +118,7 @@ st.markdown(
         letter-spacing: 0.5px;
     }}
 
-    /* Container for the entire chat area */
+    /* Container para toda a área de chat */
     .chat-container {{
         max-width: 1000px;
         margin: 20px auto;
@@ -123,7 +129,7 @@ st.markdown(
         border: 1rem solid black;
     }}
 
-    /* Message bubbles */
+    /* Mensagens do chat */
     .message {{
         margin: 10px 0;
         padding: 10px;
@@ -137,12 +143,14 @@ st.markdown(
         text-align: right;
         margin-left: auto;
         border-left: 3px solid #9370DB;
+        color: #FFFFFF; /* ADICIONADO para melhor contraste */
     }}
     .assistant-message {{
         background-color: #382952;
         text-align: left;
         margin-right: auto;
         border-right: 3px solid #BA68C8;
+        color: #FFFFFF; /* ADICIONADO para melhor contraste */
     }}
     .model-thought {{
         font-style: italic;
@@ -301,7 +309,6 @@ with st.sidebar:
 ##########################
 # Wrap ALL main content inside .chat-container
 ##########################
-
 
 #
 # 1) Nova Consulta Button (only if user has interacted)
