@@ -1,6 +1,3 @@
-# logic.py
-# This file contains the logic integration for the A Vidente application.
-
 import streamlit as st
 import requests
 from tinydb import TinyDB, Query
@@ -95,15 +92,26 @@ def separate_thinking_and_response(text: str):
 # ----------------------------------
 # 5. Streaming Function to Call Ollama’s API
 # ----------------------------------
-def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
-    # Read from st.secrets first, then environment variable, then fallback:
+def stream_ollama_response(
+    prompt: str,
+    model: str = "llama3.1:8b",
+    temperature: float = 0.7,
+    top_p: float = 0.9,
+    top_k: int = 40,
+    repeat_penalty: float = 1.2,
+    num_predict: int = 512
+):
+    """
+    Streams text from the Ollama API using adjustable parameters
+    to reduce repetition, control creativity, etc.
+    """
     url = st.secrets.get("OLLAMA_PUBLIC_URL", os.getenv("OLLAMA_PUBLIC_URL", "http://127.0.0.1:11435/api/generate"))
     
     # Updated headers to mimic a browser request
     headers = {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "true",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
         "Accept": "application/json",
         "Accept-Language": "en-US,en;q=0.9",
         "Origin": "http://localhost:8501",
@@ -117,7 +125,17 @@ def stream_ollama_response(prompt: str, model: str = "llama3.1:8b"):
         "X-Requested-With": "XMLHttpRequest"
     }
 
-    payload = {"model": model, "prompt": prompt}
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "options": {
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
+            "repeat_penalty": repeat_penalty,
+            "num_predict": num_predict
+        }
+    }
 
     try:
         response = requests.post(url, json=payload, headers=headers, stream=True)

@@ -1,7 +1,3 @@
-# app.py
-# This file contains the UI customization for the EKO app.
-# It handles the visual styling and layout while importing logic functions from logic.py.
-
 import streamlit as st
 from logic import (
     STATIC_CONTEXT,
@@ -59,7 +55,16 @@ def handle_message(user_input: str):
     final_stream_response = ""
 
     with st.spinner("A Vidente está consultando as energias..."):
-        for partial in stream_ollama_response(prompt):
+        # Use the configured parameters from the sidebar
+        for partial in stream_ollama_response(
+            prompt,
+            model="llama3.1:8b",
+            temperature=st.session_state.get("temperature", 0.7),
+            top_p=st.session_state.get("top_p", 0.9),
+            top_k=st.session_state.get("top_k", 40),
+            repeat_penalty=st.session_state.get("repeat_penalty", 1.2),
+            num_predict=st.session_state.get("num_predict", 512)
+        ):
             final_stream_response = partial
             # Separate internal thinking (<think>) from final answer
             _, final_answer = separate_thinking_and_response(final_stream_response)
@@ -106,9 +111,6 @@ st.markdown(
     [data-testid="stAppViewContainer"] {{
         padding-top: 1rem;
         padding-bottom: 1rem;
-        /* display: flex;
-           justify-content: center;
-           align-items: flex-start; */
         margin: 0 auto;
     }}
 
@@ -143,14 +145,14 @@ st.markdown(
         text-align: right;
         margin-left: auto;
         border-left: 3px solid #9370DB;
-        color: #FFFFFF; /* ADICIONADO para melhor contraste */
+        color: #FFFFFF;
     }}
     .assistant-message {{
         background-color: #382952;
         text-align: left;
         margin-right: auto;
         border-right: 3px solid #BA68C8;
-        color: #FFFFFF; /* ADICIONADO para melhor contraste */
+        color: #FFFFFF;
     }}
     .model-thought {{
         font-style: italic;
@@ -270,7 +272,7 @@ st.markdown(
 )
 
 ##########################
-# Sidebar Column
+# Sidebar with model parameter controls
 ##########################
 with st.sidebar:
     st.markdown(
@@ -306,8 +308,15 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
+    # Model Parameter Controls
+    st.session_state["temperature"] = st.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
+    st.session_state["top_p"] = st.slider("Top P", 0.0, 1.0, 0.9, 0.05)
+    st.session_state["top_k"] = st.slider("Top K", 1, 100, 40, 1)
+    st.session_state["repeat_penalty"] = st.slider("Repeat Penalty", 1.0, 2.0, 1.2, 0.1)
+    st.session_state["num_predict"] = st.slider("Max Tokens (num_predict)", 64, 1024, 512, 32)
+
 ##########################
-# Wrap ALL main content inside .chat-container
+# Wrap ALL main content
 ##########################
 
 #
