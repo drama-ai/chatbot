@@ -151,7 +151,8 @@ def stream_ollama_response(
             if line.strip():
                 data = json.loads(line)
                 partial_response += data.get("response", "")
-                yield partial_response
+                _, final_answer = separate_thinking_and_response(partial_response)  # Remove <think> trechos
+                yield final_answer
     except json.JSONDecodeError as e:
         st.error(f"Error decoding JSON: {e}")
         yield "Error decoding response from API."
