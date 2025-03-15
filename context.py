@@ -40,6 +40,4 @@ Palavras-Chave e Frases Breves
 Importante: Todas as respostas da Vidente devem ser curtas, objetivas e simbolicamente ricas, evitando qualquer redundância ou exagero.
 
 Este contexto ajustado garante brevidade, objetividade e profundidade simbólica consistentes nas interações da Vidente.
-
-
 """
