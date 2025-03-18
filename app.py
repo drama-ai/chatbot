@@ -216,21 +216,21 @@ def handle_message(user_input: str):
     else:
         tone_instruction = "Responda de maneira enigmática e simbolicamente rica, caso o tema permita."
 
-    # Restored persona as 'A Vidente' referencing the context
-    prompt = f"""Você é A Vidente, uma entidade enigmática e mística com a seguinte personalidade e contexto:
+    # Restored persona as 'EKO' referencing the context
+    prompt = f"""Você é EKO, uma entidade enigmática e mística com a seguinte personalidade e contexto:
 {STATIC_CONTEXT}
 
 {tone_instruction}
 Evite repetir instruções ou lembretes sobre sua própria conduta na resposta.
-
+NUNCA mencione cartas de tarô específicas (como "O Mago", "A Espada", etc.) a menos que esteja realizando uma leitura de tarô explicitamente solicitada.
 """
 
     # Add conversation history
     history = "\n".join(
-        f"{'Consulente' if msg['role'] == 'user' else 'A Vidente'}: {msg['content']}"
+        f"{'Consulente' if msg['role'] == 'user' else 'EKO'}: {msg['content']}"
         for msg in conversation
     )
-    prompt += history + "\nA Vidente:"
+    prompt += history + "\nEKO:"
 
     # Get final text (no partial repeated lines)
     final_response = get_full_ollama_response(prompt)
@@ -239,8 +239,23 @@ Evite repetir instruções ou lembretes sobre sua própria conduta na resposta.
     _, final_answer = separate_thinking_and_response(final_response)
     final_answer = final_answer.replace('"', '')
     final_answer = re.sub(r'\(.*?\)', '', final_answer)
-    if "A Vidente:" in final_answer:
+    if "EKO:" in final_answer:
+        final_answer = final_answer.split("EKO:")[1].strip()
+    elif "A Vidente:" in final_answer:  # Backwards compatibility
         final_answer = final_answer.split("A Vidente:")[1].strip()
+        
+    # Remove any mentions of tarot cards if not in tarot game mode
+    if "tarot_game" not in st.session_state and not "jogo de tarot" in user_input.lower():
+        # Remove common tarot card mentions
+        tarot_cards = ["O Mago", "A Sacerdotisa", "A Imperatriz", "O Imperador", 
+                       "O Hierofante", "Os Enamorados", "O Carro", "A Força", 
+                       "O Eremita", "A Roda da Fortuna", "A Justiça", "O Enforcado",
+                       "A Morte", "A Temperança", "O Diabo", "A Torre", "A Estrela",
+                       "A Lua", "O Sol", "O Julgamento", "O Mundo", "O Louco", "A Espada"]
+        for card in tarot_cards:
+            final_answer = re.sub(fr'{card}:', '', final_answer)
+            final_answer = re.sub(fr'{card}[,.!?]', '.', final_answer)
+            
     final_answer = re.sub(r'Observação:.*', '', final_answer, flags=re.DOTALL).strip()
 
     # Save assistant's final response

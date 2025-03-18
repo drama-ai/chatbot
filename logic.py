@@ -166,16 +166,27 @@ def separate_thinking_and_response(text: str):
     # Remove aspas excessivas
     final_response = re.sub(r'\"{2,}', '"', final_response).strip()
     
-    # Remove diálogo da Vidente consigo mesma
+    # Remove diálogo da EKO consigo mesma
     final_response = re.sub(r'Eko:\s*.*?(?=\s*Eko:|$)', '', final_response, flags=re.DOTALL).strip()
-
+    
     # Remove mensagens que fazem referência ao funcionamento interno do modelo
     final_response = re.sub(r'Observação:.*', '', final_response, flags=re.DOTALL).strip()
-
+    
+    # Remove qualquer texto anterior a "EKO:" ou "A Vidente:"
+    if "EKO:" in final_response:
+        final_response = final_response.split("EKO:")[-1].strip()
+    elif "Eko:" in final_response:
+        final_response = final_response.split("Eko:")[-1].strip()
+    elif "A Vidente:" in final_response:
+        final_response = final_response.split("A Vidente:")[-1].strip()
+    
+    # Certifique-se de que referências a "Vidente" são substituídas por "EKO"
+    final_response = re.sub(r'\b(A Vidente|Vidente)\b', 'EKO', final_response)
+    
     return [], final_response.strip()
 
 # ----------------------------------
-# 5. Streaming Function to Call Ollama’s API
+# 5. Streaming Function to Call Ollama's API
 # ----------------------------------
 def stream_ollama_response(
     prompt: str,
@@ -229,14 +240,18 @@ def stream_ollama_response(
         yield "Desculpe, ocorreu um erro ao gerar uma resposta."
         return
 
-    partial_response = ""
+    # Vamos coletar toda a resposta antes de fazer qualquer processamento
+    full_response = ""
     try:
         for line in response.iter_lines(decode_unicode=True):
             if line.strip():
                 data = json.loads(line)
-                partial_response += data.get("response", "")
-                _, final_answer = separate_thinking_and_response(partial_response)
-                yield final_answer
+                delta = data.get("response", "")
+                full_response += delta
+                
+                # Só fazemos yield se o modelo terminou de gerar
+                if data.get("done", False):
+                    _, clean_response = separate_thinking_and_response(full_response)
+                    yield clean_response
     except json.JSONDecodeError as e:
         st.error(f"Error decoding JSON: {e}")
-        yield "Erro ao decodificar a resposta da API."
