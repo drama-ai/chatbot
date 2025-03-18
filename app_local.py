@@ -1,5 +1,5 @@
 import streamlit as st
-from logic import (
+from logic_local import (
     STATIC_CONTEXT,
     draw_tarot_card,
     add_message,
@@ -11,9 +11,8 @@ from logic import (
 import re
 import base64
 import os
-import random
+import random  # Adicionado para permitir o uso de random
 
-# Tarot cards dictionary (local definition)
 cartas_tarot = {
     1: {"nome": "O Mago"},
     2: {"nome": "A Sacerdotisa"},
@@ -128,6 +127,7 @@ def handle_message(user_input: str):
         return
 
     # --- Tarot Game Handling ---
+    # If a tarot game is already in progress, handle the response
     if "tarot_game" in st.session_state:
         if user_input.lower() == "sim":
             step = st.session_state["tarot_game"]["step"]
@@ -149,20 +149,27 @@ def handle_message(user_input: str):
             del st.session_state["tarot_game"]
             return
 
+    # If the user is starting a tarot game
     if "jogo de tarot" in user_input.lower():
         st.session_state["tarot_game"] = {"step": 1, "cards": []}
         card = draw_tarot_card()
         st.session_state["tarot_game"]["cards"].append(card)
         add_message("assistant", f"Primeira carta: {card}. Deseja que tire a segunda carta? Responda 'sim' para continuar.")
         return
+
     # --- End Tarot Game Handling ---
 
+    # Mark that user has taken an action
     st.session_state["action_taken"] = True
+
+    # Save user's message to DB
     add_message("user", user_input)
     conversation = get_conversation()
 
+    # Verificar se a pergunta está relacionada a astrologia, signos ou horóscopo
     if re.search(r'\b(astrologia|signos|horóscopo)\b', user_input, re.IGNORECASE):
         tone_instruction = "Os astros traçam caminhos, mas cada um tem seu próprio brilho no céu. O que realmente deseja compreender sobre sua jornada?"
+    # Avaliar a complexidade da entrada para saudações curtas
     elif len(user_input.split()) <= 2 and re.match(r"^(oi|olá|bom dia|e aí|opa|hello)$", user_input, re.IGNORECASE):
         tone_instruction = """Cumprimente o consulente de forma acolhedora e pergunte se deseja:
         - Tirar uma carta de tarô (uma única carta)
@@ -175,6 +182,7 @@ def handle_message(user_input: str):
     else:
         tone_instruction = "Responda de maneira enigmática e simbolicamente rica, caso o tema permita."
 
+    # Build prompt with Vidente context including tone instruction
     prompt = f"""Você é Eko, uma entidade enigmática e mística com a seguinte personalidade e contexto:\n\n{STATIC_CONTEXT}\n\n
     {tone_instruction}
     Evite repetir instruções ou lembretes sobre sua própria conduta na resposta.\n\n"""
@@ -185,24 +193,38 @@ def handle_message(user_input: str):
     prompt += history + "\nEko:"
 
     final_stream_response = ""
+
+    # Show a spinner while generating the response
     with st.spinner("Eko estou consultando as energias..."):
+        # Stream from Ollama, but do not display partial text to avoid duplication
         for partial in stream_ollama_response(
             prompt,
             model="llama3.1:8b",
-            temperature=0.6,
+            temperature=0.6,  # A bit higher for more creative responses
             top_p=0.85,
             top_k=50,
             repeat_penalty=1.3,
             num_predict=256
         ):
             final_stream_response = partial
-
+            
+    # Process the final response to filter out unwanted text
     _, final_answer = separate_thinking_and_response(final_stream_response)
+
+    # Remove unnecessary quotes
     final_answer = final_answer.replace('"', '')
+
+    # Filter out scene directions if not needed
     final_answer = re.sub(r'\(.*?\)', '', final_answer)
+
+    # Check to avoid Eko falando para mim mesma
     if "Eko:" in final_answer:
         final_answer = final_answer.split("Eko:")[1].strip()
+
+    # Remove qualquer referência ao funcionamento do modelo
     final_answer = re.sub(r'Observação:.*', '', final_answer, flags=re.DOTALL).strip()
+
+    # Save the assistant's final response
     add_message("assistant", final_answer)
 
 ##########################
@@ -222,23 +244,31 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
     
+    /* Overall app background */
     .stApp {{
         background: url("data:image/jpg;base64,{encoded_bg}") no-repeat center center fixed;
         background-size: cover;
     }}
+
+    /* Força uma largura maior no bloco principal do Streamlit */
     .stMainBlockContainer {{
         max-width: 1000px !important;
         margin: 0 auto !important;
     }}
+
     [data-testid="stAppViewContainer"] {{
         padding-top: 1rem;
         padding-bottom: 1rem;
         margin: 0 auto;
     }}
+
+    /* Global font/color overrides */
     .stApp, .stApp * {{
         font-family: 'Press Start 2P', monospace !important;
         letter-spacing: 0.5px;
     }}
+
+    /* Container para toda a área de chat */
     .chat-container {{
         max-width: 1000px;
         margin: 20px auto;
@@ -248,6 +278,8 @@ st.markdown(
         box-shadow: 0 2px 20px rgba(186, 104, 200, 0.25);
         border: 1rem solid black;
     }}
+
+    /* Mensagens do chat */
     .message {{
         margin: 10px 0;
         padding: 10px;
@@ -292,6 +324,8 @@ st.markdown(
     .clear-button:hover {{
         background-color: #E65C50;
     }}
+
+    /* Top-left corner badge (placed in the sidebar) */
     .header-left {{
         text-align: left;
         padding: 20px;
@@ -312,6 +346,8 @@ st.markdown(
         font-size: 0.7rem;
         margin-top: 5px;
     }}
+
+    /* Info icon with tooltip */
     .info-icon {{
         display: inline-block;
         position: relative;
@@ -337,6 +373,8 @@ st.markdown(
     .info-icon:hover .tooltip-text {{
         visibility: visible;
     }}
+
+    /* Container for the 'Oi, eu sou a EKO' block */
     .eko-box {{
         background-color: #EEEEEE;
         color: #000000;
@@ -353,6 +391,8 @@ st.markdown(
         width: 80%;
         margin: 10px auto;
     }}
+
+    /* Buttons: set text color to black for better contrast on white */
     .stButton button {{
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -362,12 +402,17 @@ st.markdown(
         margin: 5px;
         cursor: pointer;
     }}
+
+    /* Make the sidebar background 100% transparent */
     [data-testid="stSidebar"] {{
         background-color: transparent !important;
     }}
+
+    /* --- Spinner Overrides --- */
     [data-testid="stSpinner"] {{
         background-color: transparent !important;
     }}
+
     [data-testid="stSpinner"] .stSpinner {{
         background-color: rgba(0, 0, 0, 0.4) !important;
         color: #ffffff !important;
@@ -375,6 +420,7 @@ st.markdown(
         border-radius: 10px;
         padding: 20px;
     }}
+
     [data-testid="stSpinner"] .stSpinner > div > div {{
         border-color: #BA68C8 transparent transparent transparent !important;
     }}
@@ -396,13 +442,16 @@ with st.sidebar:
         ''',
         unsafe_allow_html=True
     )
+    # Horizontal divider
     st.markdown("<hr style='border: 1px solid #fff; margin: 10px 0;'>", unsafe_allow_html=True)
 
+    # 'Nova Consulta' button moved to the sidebar
     if st.session_state["action_taken"]:
         if st.button("🔮 Nova Consulta", key="clear"):
             clear_conversation()
             st.experimental_rerun()
 
+    # Model Parameter Controls
     st.session_state["temperature"] = st.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
     st.session_state["top_p"] = st.slider("Top P", 0.0, 1.0, 0.9, 0.05)
     st.session_state["top_k"] = st.slider("Top K", 1, 100, 40, 1)
@@ -415,6 +464,9 @@ with st.sidebar:
 
 st.markdown("---")
 
+#
+# 1) EKO Box: Avatar + Title + Subtitle
+#
 if encoded_avatar:
     st.markdown(
         f'''
@@ -430,6 +482,9 @@ if encoded_avatar:
 else:
     st.write("⚠️ Avatar not found:", avatar_path)
 
+#
+# 2) Conversation History
+#
 st.markdown("### 📜 Sua Consulta com a Vidente")
 conversation = get_conversation()
 for msg in conversation:
@@ -441,12 +496,16 @@ for msg in conversation:
             unsafe_allow_html=True
         )
     else:
+        # assistant
         thinking_parts, final_answer = separate_thinking_and_response(content)
         st.markdown(
             f'<div class="message assistant-message"><strong>Eko:</strong> {final_answer}</div>',
             unsafe_allow_html=True
         )
 
+#
+# 3) Info Icon + Input + Buttons at the bottom
+#
 st.markdown(
     """
     <div style="text-align:center; margin-bottom: 20px;">
@@ -483,4 +542,7 @@ with colC:
         st.session_state["action_taken"] = True
         handle_message("Leia minha sorte, por favor!")
 
+#
+# Done
+#
 st.markdown('</div>', unsafe_allow_html=True)

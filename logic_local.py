@@ -161,7 +161,7 @@ def separate_thinking_and_response(text: str):
     
     # Remove floreios quando a resposta for simples
     if not re.search(r"(tarot|destino|futuro|existência|energia|forças)", text, re.IGNORECASE):
-        final_response = re.sub(r"\(.*?\)", "", final_response, flags=re.DOTALL)
+        final_response = re.sub(r"\(.*?\)", "", final_response, flags=re.DOTALL)  # Remove elementos desnecessários
 
     # Remove aspas excessivas
     final_response = re.sub(r'\"{2,}', '"', final_response).strip()
@@ -192,6 +192,7 @@ def stream_ollama_response(
     """
     url = st.secrets.get("OLLAMA_PUBLIC_URL", os.getenv("OLLAMA_PUBLIC_URL", "http://127.0.0.1:11434/api/generate"))
     
+    # Updated headers to mimic a browser request
     headers = {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "true",
@@ -235,7 +236,7 @@ def stream_ollama_response(
             if line.strip():
                 data = json.loads(line)
                 partial_response += data.get("response", "")
-                _, final_answer = separate_thinking_and_response(partial_response)
+                _, final_answer = separate_thinking_and_response(partial_response)  # Remove <think> sections
                 yield final_answer
     except json.JSONDecodeError as e:
         st.error(f"Error decoding JSON: {e}")
