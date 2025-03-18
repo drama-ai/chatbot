@@ -173,17 +173,22 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
         
         # Add fallback endpoints
         ollama_endpoints.extend([
+            "http://127.0.0.1:11434",  # Direct IP address works better with VPNs
+            "http://0.0.0.0:11434",    # Bind address if OLLAMA_HOST is set
             "http://localhost:11434",
-            "http://127.0.0.1:11434",
             "http://host.docker.internal:11434"
         ])
         
         # Try each endpoint
         for ollama_base in ollama_endpoints:
             try:
-                print(f"Sending full response request to Ollama at: {ollama_base}")
+                # Ensure properly formatted URL by removing trailing slashes and adding /api/
+                base_url = ollama_base.rstrip('/')
+                api_url = f"{base_url}/api/generate"
+                
+                print(f"Sending full response request to Ollama at: {api_url}")
                 response = s.post(
-                    f"{ollama_base}/api/generate",
+                    api_url,
                     json={
                         "model": model,
                         "prompt": prompt,
@@ -193,9 +198,18 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
                     timeout=45  # Increased timeout for VPN conditions
                 )
                 
+                print(f"Response status code: {response.status_code}")
+                
                 if response.status_code == 200:
                     result = response.json()
                     return result.get("response", "")
+                else:
+                    print(f"Response from {api_url}: Status {response.status_code}")
+                    try:
+                        error_content = response.text
+                        print(f"Error content: {error_content[:200]}...")
+                    except:
+                        print("Could not read error content")
                 
             except Exception as endpoint_error:
                 print(f"Error with endpoint {ollama_base}: {str(endpoint_error)}")

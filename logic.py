@@ -226,9 +226,15 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
         # Try each endpoint
         for ollama_base in ollama_endpoints:
             try:
-                print(f"Attempting to stream response from Ollama at: {ollama_base}")
+                # Ensure properly formatted URL by removing trailing slashes and adding /api/
+                base_url = ollama_base.rstrip('/')
+                
+                # Print the exact URL being used
+                api_url = f"{base_url}/api/generate"
+                print(f"Attempting to stream response from Ollama at: {api_url}")
+                
                 response = s.post(
-                    f"{ollama_base}/api/generate",
+                    api_url,
                     json={
                         "model": model,
                         "prompt": prompt,
@@ -239,16 +245,30 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
                     timeout=45  # Increased timeout for VPN conditions
                 )
                 
+                print(f"Response status code: {response.status_code}")
+                
                 if response.status_code == 200:
-                    print(f"Streaming from {ollama_base} with status {response.status_code}")
+                    print(f"Streaming from {api_url} with status {response.status_code}")
                     for line in response.iter_lines():
                         if line:
-                            data = json.loads(line)
-                            if "response" in data:
-                                yield data["response"]
+                            try:
+                                data = json.loads(line)
+                                if "response" in data:
+                                    yield data["response"]
+                            except json.JSONDecodeError as e:
+                                print(f"Error decoding JSON: {e}, line: {line}")
+                                continue
                     
                     # If we successfully completed streaming, exit the function
                     return
+                else:
+                    # Print response details to help debug
+                    print(f"Response from {api_url}: Status {response.status_code}")
+                    try:
+                        error_content = response.text
+                        print(f"Error content: {error_content[:200]}...")
+                    except:
+                        print("Could not read error content")
                 
             except Exception as endpoint_error:
                 print(f"Error with endpoint {ollama_base}: {str(endpoint_error)}")
