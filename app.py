@@ -164,12 +164,22 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
         # Try different Ollama endpoints
         ollama_endpoints = []
         
-        # Try environment variables first
+        # Try environment variables first - handle pre-formatted URLs correctly
         if os.environ.get("OLLAMA_PUBLIC_URL"):
-            ollama_endpoints.append(os.environ.get("OLLAMA_PUBLIC_URL").rstrip('/'))
+            public_url = os.environ.get("OLLAMA_PUBLIC_URL")
+            # Check if URL already contains the API path to avoid duplication
+            if "/api/generate" in public_url:
+                ollama_endpoints.append(public_url)  # Use complete URL as-is
+            else:
+                ollama_endpoints.append(public_url.rstrip('/'))  # Normalize for later path appending
         
         if os.environ.get("OLLAMA_API_BASE"):
-            ollama_endpoints.append(os.environ.get("OLLAMA_API_BASE").rstrip('/'))
+            api_base = os.environ.get("OLLAMA_API_BASE")
+            # Check if URL already contains the API path
+            if "/api/generate" in api_base:
+                ollama_endpoints.append(api_base)  # Use complete URL as-is
+            else:
+                ollama_endpoints.append(api_base.rstrip('/'))  # Normalize for later path appending
         
         # Add fallback endpoints
         ollama_endpoints.extend([
@@ -182,9 +192,10 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
         # Try each endpoint
         for ollama_base in ollama_endpoints:
             try:
-                # Ensure properly formatted URL by removing trailing slashes and adding /api/
-                base_url = ollama_base.rstrip('/')
-                api_url = f"{base_url}/api/generate"
+                # Properly construct the API URL without duplication
+                api_url = ollama_base
+                if not api_url.endswith("/api/generate"):
+                    api_url = f"{ollama_base.rstrip('/')}/api/generate"
                 
                 print(f"Sending full response request to Ollama at: {api_url}")
                 response = s.post(

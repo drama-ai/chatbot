@@ -208,12 +208,22 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
         # Try different Ollama endpoints - prioritize direct IP which works better with VPNs
         ollama_endpoints = []
         
-        # Try environment variables first
+        # Try environment variables first - handle pre-formatted URLs correctly
         if os.environ.get("OLLAMA_PUBLIC_URL"):
-            ollama_endpoints.append(os.environ.get("OLLAMA_PUBLIC_URL").rstrip('/'))
+            public_url = os.environ.get("OLLAMA_PUBLIC_URL")
+            # Check if URL already contains the API path to avoid duplication
+            if "/api/generate" in public_url:
+                ollama_endpoints.append(public_url)  # Use complete URL as-is
+            else:
+                ollama_endpoints.append(public_url.rstrip('/'))  # Normalize for later path appending
         
         if os.environ.get("OLLAMA_API_BASE"):
-            ollama_endpoints.append(os.environ.get("OLLAMA_API_BASE").rstrip('/'))
+            api_base = os.environ.get("OLLAMA_API_BASE")
+            # Check if URL already contains the API path
+            if "/api/generate" in api_base:
+                ollama_endpoints.append(api_base)  # Use complete URL as-is
+            else:
+                ollama_endpoints.append(api_base.rstrip('/'))  # Normalize for later path appending
         
         # Add fallback endpoints - prioritize direct IP over localhost names
         ollama_endpoints.extend([
@@ -226,11 +236,11 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
         # Try each endpoint
         for ollama_base in ollama_endpoints:
             try:
-                # Ensure properly formatted URL by removing trailing slashes and adding /api/
-                base_url = ollama_base.rstrip('/')
+                # Properly construct the API URL without duplication
+                api_url = ollama_base
+                if not api_url.endswith("/api/generate"):
+                    api_url = f"{ollama_base.rstrip('/')}/api/generate"
                 
-                # Print the exact URL being used
-                api_url = f"{base_url}/api/generate"
                 print(f"Attempting to stream response from Ollama at: {api_url}")
                 
                 response = s.post(
