@@ -15,7 +15,7 @@ from logic import (
     get_conversation,
     clear_conversation,
     separate_thinking_and_response,
-    stream_ollama_response
+    stream_ollama_response,
 )
 
 ###############################################################################
@@ -23,12 +23,14 @@ from logic import (
 ###############################################################################
 st.set_page_config(initial_sidebar_state="collapsed")
 
+
 def get_base64_image(image_path: str) -> str:
     if not os.path.exists(image_path):
         return ""
     with open(image_path, "rb") as f:
         data = f.read()
     return base64.b64encode(data).decode("utf-8")
+
 
 # Load images
 bg_path = "assets/background2.png"
@@ -46,7 +48,8 @@ if "action_taken" not in st.session_state:
 ###############################################################################
 # 2) INJECT CSS AT THE TOP (NO chat-container)
 ###############################################################################
-st.markdown(f"""
+st.markdown(
+    f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -127,10 +130,13 @@ st.markdown(f"""
     padding: 0 !important;
 }}
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
+
 
 ###############################################################################
-# 3) MESSAGE MANAGEMENT 
+# 3) MESSAGE MANAGEMENT
 ###############################################################################
 def add_message(role, content):
     """Adds a message to the conversation history"""
@@ -138,16 +144,20 @@ def add_message(role, content):
         st.session_state["messages"] = []
     st.session_state["messages"].append({"role": role, "content": content})
 
+
 def get_conversation():
     """Returns the current conversation history"""
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
     return st.session_state["messages"]
 
+
 ###############################################################################
 # 4) FETCH A SINGLE, FINAL RESPONSE (NO PARTIAL REPETITIONS)
 ###############################################################################
-def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperature: float = 0.9):
+def get_full_ollama_response(
+    prompt: str, model: str = "llama3.1:8b", temperature: float = 0.9
+):
     """Get a complete response from Ollama API with VPN-aware connection handling"""
     try:
         # Create a session with retries
@@ -156,14 +166,14 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
             total=3,
             backoff_factor=0.5,
             status_forcelist=[500, 502, 503, 504],
-            allowed_methods=["GET", "POST"]
+            allowed_methods=["GET", "POST"],
         )
-        s.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
-        s.mount('https://', requests.adapters.HTTPAdapter(max_retries=retries))
-        
+        s.mount("http://", requests.adapters.HTTPAdapter(max_retries=retries))
+        s.mount("https://", requests.adapters.HTTPAdapter(max_retries=retries))
+
         # Try different Ollama endpoints
         ollama_endpoints = []
-        
+
         # Try environment variables first - handle pre-formatted URLs correctly
         if os.environ.get("OLLAMA_PUBLIC_URL"):
             public_url = os.environ.get("OLLAMA_PUBLIC_URL")
@@ -171,24 +181,30 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
             if "/api/generate" in public_url:
                 ollama_endpoints.append(public_url)  # Use complete URL as-is
             else:
-                ollama_endpoints.append(public_url.rstrip('/'))  # Normalize for later path appending
-        
+                ollama_endpoints.append(
+                    public_url.rstrip("/")
+                )  # Normalize for later path appending
+
         if os.environ.get("OLLAMA_API_BASE"):
             api_base = os.environ.get("OLLAMA_API_BASE")
             # Check if URL already contains the API path
             if "/api/generate" in api_base:
                 ollama_endpoints.append(api_base)  # Use complete URL as-is
             else:
-                ollama_endpoints.append(api_base.rstrip('/'))  # Normalize for later path appending
-        
+                ollama_endpoints.append(
+                    api_base.rstrip("/")
+                )  # Normalize for later path appending
+
         # Add fallback endpoints
-        ollama_endpoints.extend([
-            "http://127.0.0.1:11434",  # Direct IP address works better with VPNs
-            "http://0.0.0.0:11434",    # Bind address if OLLAMA_HOST is set
-            "http://localhost:11434",
-            "http://host.docker.internal:11434"
-        ])
-        
+        ollama_endpoints.extend(
+            [
+                "http://127.0.0.1:11434",  # Direct IP address works better with VPNs
+                "http://0.0.0.0:11434",  # Bind address if OLLAMA_HOST is set
+                "http://localhost:11434",
+                "http://host.docker.internal:11434",
+            ]
+        )
+
         # Try each endpoint
         for ollama_base in ollama_endpoints:
             try:
@@ -196,7 +212,7 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
                 api_url = ollama_base
                 if not api_url.endswith("/api/generate"):
                     api_url = f"{ollama_base.rstrip('/')}/api/generate"
-                
+
                 print(f"Sending full response request to Ollama at: {api_url}")
                 response = s.post(
                     api_url,
@@ -204,13 +220,13 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
                         "model": model,
                         "prompt": prompt,
                         "temperature": temperature,
-                        "stream": False
+                        "stream": False,
                     },
-                    timeout=45  # Increased timeout for VPN conditions
+                    timeout=45,  # Increased timeout for VPN conditions
                 )
-                
+
                 print(f"Response status code: {response.status_code}")
-                
+
                 if response.status_code == 200:
                     result = response.json()
                     return result.get("response", "")
@@ -221,18 +237,19 @@ def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperatur
                         print(f"Error content: {error_content[:200]}...")
                     except:
                         print("Could not read error content")
-                
+
             except Exception as endpoint_error:
                 print(f"Error with endpoint {ollama_base}: {str(endpoint_error)}")
                 continue
-        
+
         # If we reach here, all endpoints failed
         return "⚠️ Não foi possível conectar ao servidor Ollama. Verifique sua conexão ou tente novamente mais tarde."
-            
+
     except Exception as e:
         error_message = f"Error getting full response from Ollama: {str(e)}"
         print(error_message)
         return "⚠️ Erro ao conectar com o servidor. Tente novamente mais tarde ou consulte o administrador do sistema."
+
 
 ###############################################################################
 # 5) HANDLE MESSAGES (RESTORE 'A VIDENTE' PERSONA)
@@ -241,37 +258,45 @@ def handle_message(user_input: str):
     user_input = user_input.strip()
     if not user_input:
         return
-    
+
     # We no longer add the user message here, as it's added in the form handler
     # This removes the duplication problem
-    
+
     # Check for tarot reading requests in user input
-    tarot_keywords = ["jogo de tarot", "tirar tarot", "leitura de tarot", "tarô", "tarot", "carta", "cartas"]
-    
+    tarot_keywords = [
+        "jogo de tarot",
+        "tirar tarot",
+        "leitura de tarot",
+        "tarô",
+        "tarot",
+        "carta",
+        "cartas",
+    ]
+
     is_tarot_request = False
     for keyword in tarot_keywords:
         if keyword in user_input.lower():
             is_tarot_request = True
             break
-    
+
     # Extract the card if it's included in the message
     card = None
     if "carta sorteada foi:" in user_input.lower():
         parts = user_input.split("carta sorteada foi:")
         if len(parts) > 1:
             card = parts[1].strip()
-    
+
     if is_tarot_request:
         # For text-based tarot requests that don't include a specific card
         if not card:
             card = draw_tarot_card()
-        
+
         # Build prompt for card interpretation
         prompt = f"""Você é a EKO, uma taróloga e vidente.
                     O consulente tirou a carta: {card}.
                     Dê uma interpretação breve mas profunda sobre esta carta 
                     e como ela pode se relacionar com a vida do consulente."""
-                    
+
         response = get_full_ollama_response(prompt)
         add_message("assistant", response)
         return
@@ -282,9 +307,11 @@ def handle_message(user_input: str):
     conversation = get_conversation()
 
     # Simple tone detection
-    if re.search(r'\b(astrologia|signos|horóscopo)\b', user_input, re.IGNORECASE):
+    if re.search(r"\b(astrologia|signos|horóscopo)\b", user_input, re.IGNORECASE):
         tone_instruction = "Os astros traçam caminhos, mas cada um tem seu próprio brilho no céu. O que realmente deseja compreender sobre sua jornada?"
-    elif len(user_input.split()) <= 2 and re.match(r"^(oi|olá|bom dia|e aí|opa|hello)$", user_input, re.IGNORECASE):
+    elif len(user_input.split()) <= 2 and re.match(
+        r"^(oi|olá|bom dia|e aí|opa|hello)$", user_input, re.IGNORECASE
+    ):
         tone_instruction = """Cumprimente o consulente de forma acolhedora e pergunte se deseja:
         - Tirar uma carta de tarô (uma única carta)
         - Compartilhar um segredo
@@ -293,7 +320,9 @@ def handle_message(user_input: str):
 
         Não use a expressão 'primeira carta' até que o consulente concorde explicitamente em realizar uma leitura de múltiplas cartas e saiba quantas cartas serão tiradas."""
     else:
-        tone_instruction = "Responda de maneira enigmática e simbolicamente rica, caso o tema permita."
+        tone_instruction = (
+            "Responda de maneira enigmática e simbolicamente rica, caso o tema permita."
+        )
 
     # Restored persona as 'EKO' referencing the context
     prompt = f"""Você é EKO, uma entidade enigmática e mística com a seguinte personalidade e contexto:
@@ -316,36 +345,58 @@ NUNCA mencione cartas de tarô específicas (como "O Mago", "A Espada", etc.) a 
 
     # Clean up
     _, final_answer = separate_thinking_and_response(final_response)
-    final_answer = final_answer.replace('"', '')
-    final_answer = re.sub(r'\(.*?\)', '', final_answer)
+    final_answer = final_answer.replace('"', "")
+    final_answer = re.sub(r"\(.*?\)", "", final_answer)
     if "EKO:" in final_answer:
         final_answer = final_answer.split("EKO:")[1].strip()
     elif "A Vidente:" in final_answer:  # Backwards compatibility
         final_answer = final_answer.split("A Vidente:")[1].strip()
-        
+
     # Remove any mentions of tarot cards if not in tarot game mode
     if not is_tarot_request:
         # Remove common tarot card mentions
-        tarot_cards = ["O Mago", "A Sacerdotisa", "A Imperatriz", "O Imperador", 
-                       "O Hierofante", "Os Enamorados", "O Carro", "A Força", 
-                       "O Eremita", "A Roda da Fortuna", "A Justiça", "O Enforcado",
-                       "A Morte", "A Temperança", "O Diabo", "A Torre", "A Estrela",
-                       "A Lua", "O Sol", "O Julgamento", "O Mundo", "O Louco", "A Espada"]
+        tarot_cards = [
+            "O Mago",
+            "A Sacerdotisa",
+            "A Imperatriz",
+            "O Imperador",
+            "O Hierofante",
+            "Os Enamorados",
+            "O Carro",
+            "A Força",
+            "O Eremita",
+            "A Roda da Fortuna",
+            "A Justiça",
+            "O Enforcado",
+            "A Morte",
+            "A Temperança",
+            "O Diabo",
+            "A Torre",
+            "A Estrela",
+            "A Lua",
+            "O Sol",
+            "O Julgamento",
+            "O Mundo",
+            "O Louco",
+            "A Espada",
+        ]
         for card in tarot_cards:
-            final_answer = re.sub(fr'{card}:', '', final_answer)
-            final_answer = re.sub(fr'{card}[,.!?]', '.', final_answer)
-            
-    final_answer = re.sub(r'Observação:.*', '', final_answer, flags=re.DOTALL).strip()
+            final_answer = re.sub(rf"{card}:", "", final_answer)
+            final_answer = re.sub(rf"{card}[,.!?]", ".", final_answer)
+
+    final_answer = re.sub(r"Observação:.*", "", final_answer, flags=re.DOTALL).strip()
 
     # Save assistant's final response
     add_message("assistant", final_answer)
+
 
 ###############################################################################
 # 6) MAIN APPLICATION
 ###############################################################################
 def main():
     # Set the background image
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <style>
     .stApp {{
         background: url("data:image/png;base64,{encoded_bg}") no-repeat center center fixed;
@@ -362,32 +413,34 @@ def main():
         padding-top: 1rem;
     }}
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # Fixed header area that won't scroll
     header_container = st.container()
     with header_container:
         if encoded_avatar:
             st.markdown(
-                f'''
+                f"""
                 <div class="eko-box">
                     <img src="data:image/png;base64,{encoded_avatar}" alt="Avatar" style="width:150px; margin: 0 auto;" />
-                    {f'<img src="data:image/png;base64,{encoded_intro}" alt="Introdução EKO" style="display:block; margin:1.2rem auto; max-width:650px; height:auto;" />' if encoded_intro else ''}
+                    {f'<img src="data:image/png;base64,{encoded_intro}" alt="Introdução EKO" class="intro-img"/>' if encoded_intro else ''}
                     <p class="subtitle">Vamos traçar novos destinos?</p>
                 </div>
-                ''',
-                unsafe_allow_html=True
+                """,
+                unsafe_allow_html=True,
             )
         else:
             st.write("⚠️ Avatar not found:", avatar_path)
-    
+
     # Initialize conversation if needed
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
-    
+
     # Get the conversation
     conversation = get_conversation()
-    
+
     # Only show the message container if there are messages
     if len(conversation) > 0:
         # Create scrollable message container with fixed height
@@ -395,22 +448,23 @@ def main():
         with message_container:
             # Create a placeholder for JavaScript injection
             js_placeholder = st.empty()
-            
+
             for msg in conversation:
                 if msg["role"] == "user":
                     st.markdown(
                         f'<div class="message user-message"><strong>Consulente:</strong> {msg["content"]}</div>',
-                        unsafe_allow_html=True
+                        unsafe_allow_html=True,
                     )
                 else:
                     _, final_answer = separate_thinking_and_response(msg["content"])
                     st.markdown(
                         f'<div class="message assistant-message"><strong>EKO:</strong> {final_answer}</div>',
-                        unsafe_allow_html=True
+                        unsafe_allow_html=True,
                     )
-            
+
             # Add JavaScript for auto-scrolling to the bottom of the message container
-            js_placeholder.markdown("""
+            js_placeholder.markdown(
+                """
             <script>
                 // Function to scroll all scrollable containers to the bottom
                 function scrollToBottom() {
@@ -427,24 +481,39 @@ def main():
                 setTimeout(scrollToBottom, 200);
                 setTimeout(scrollToBottom, 500);
             </script>
-            """, unsafe_allow_html=True)
-    
+            """,
+                unsafe_allow_html=True,
+            )
+
     # Fixed footer area for input
     footer_container = st.container()
     with footer_container:
         # Create a placeholder for the spinner/loading message
         spinner_placeholder = st.empty()
-        
+
         # Using st.chat_input instead of form for a cleaner chat experience
         user_input = st.chat_input("Mande sua pergunta para a EKO...", key="user_input")
-        
+
         # Center the Tarot button at the bottom with proper spacing
         st.markdown("<br>", unsafe_allow_html=True)  # Add spacing
-        
+
         # Simplify approach - just use a regular Streamlit button with custom styling
-        st.markdown("""
+        st.markdown(
+            """
         <style>
         /* Style the Tarot button */
+.intro-img {
+    display: block !important;
+    margin: 1.2rem auto !important;
+    max-width: 650px !important;
+    height: auto !important;
+}
+
+        @media (max-width: 1000px) {
+    .intro-img {
+        max-width: 400px !important;
+    }
+        }
         .stButton > button {
             background-color: #4E386F !important;
             color: white !important;
@@ -469,40 +538,43 @@ def main():
             margin-bottom: 15px !important;
         }
         </style>
-        """, unsafe_allow_html=True)
-        
+        """,
+            unsafe_allow_html=True,
+        )
+
         # Use a centered column for the button
         col1, col2, col3 = st.columns([0.4, 0.2, 0.4])
         with col2:
             tarot_button = st.button("Tirar Tarot", key="tarot_btn")
-        
+
         # Handle user text input
         if user_input and user_input.strip():
             st.session_state["action_taken"] = True
             add_message("user", user_input)
-            
+
             # Show spinner in the placeholder
             with spinner_placeholder.container():
                 with st.spinner("EKO está consultando os astros..."):
                     handle_message(user_input)
-            
+
             st.rerun()
-        
-        # Handle tarot button click    
+
+        # Handle tarot button click
         if tarot_button:
             st.session_state["action_taken"] = True
             drawn_card = draw_tarot_card()
             tarot_request = f"A carta sorteada foi: {drawn_card}"
-            
+
             # Add user message first
             add_message("user", tarot_request)
-            
+
             # Show spinner in the placeholder
             with spinner_placeholder.container():
                 with st.spinner("EKO está interpretando a carta..."):
                     handle_message(tarot_request)
-            
+
             st.rerun()
+
 
 if __name__ == "__main__":
     main()
