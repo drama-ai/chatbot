@@ -147,75 +147,67 @@ def get_conversation():
 ###############################################################################
 # 4) FETCH A SINGLE, FINAL RESPONSE (NO PARTIAL REPETITIONS)
 ###############################################################################
-def get_full_ollama_response(prompt: str,
-                            model: str = "llama3.1:8b",
-                            temperature: float = 0.9):
-    """Get a complete, clean response from Ollama rather than streaming pieces"""
-    response_text = ""
-    
-    # Default fallback response if API is unavailable
-    fallback_response = "Os astros estão em silêncio neste momento. Aguarde um instante e tente novamente..."
-    
+def get_full_ollama_response(prompt: str, model: str = "llama3.1:8b", temperature: float = 0.9):
+    """Get a complete response from Ollama API with VPN-aware connection handling"""
     try:
-        # Get base URL from environment variable with fallback
-        # First check for OLLAMA_API_BASE, then OLLAMA_PUBLIC_URL
-        ollama_api_base = os.getenv('OLLAMA_API_BASE')
-        ollama_public_url = os.getenv('OLLAMA_PUBLIC_URL')
-        
-        if ollama_public_url and "/api/generate" in ollama_public_url:
-            # If OLLAMA_PUBLIC_URL includes the full path to the API endpoint,
-            # remove the /api/generate part to get the base URL
-            ollama_base = ollama_public_url.replace("/api/generate", "")
-            print(f"[DEBUG] Using OLLAMA_PUBLIC_URL: {ollama_public_url}, extracted base: {ollama_base}")
-        elif ollama_api_base:
-            ollama_base = ollama_api_base
-            print(f"[DEBUG] Using OLLAMA_API_BASE: {ollama_base}")
-        else:
-            ollama_base = 'http://localhost:11434'
-            print(f"[DEBUG] Using default Ollama URL: {ollama_base}")
-        
-        # Add retries for better reliability
+        # Create a session with retries
         s = requests.Session()
-        retries = Retry(total=3, backoff_factor=0.5)
-        s.mount('http://', HTTPAdapter(max_retries=retries))
-        s.mount('https://', HTTPAdapter(max_retries=retries))
-        
-        # Make the API call with a longer timeout
-        print(f"[DEBUG] Sending request to {ollama_base}/api/generate")
-        response = s.post(
-            f"{ollama_base}/api/generate",
-            json={
-                "model": model,
-                "prompt": prompt,
-                "temperature": temperature,
-                "stream": False
-            },
-            timeout=30  # Increased timeout
+        retries = requests.adapters.Retry(
+            total=3,
+            backoff_factor=0.5,
+            status_forcelist=[500, 502, 503, 504],
+            allowed_methods=["GET", "POST"]
         )
+        s.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
+        s.mount('https://', requests.adapters.HTTPAdapter(max_retries=retries))
         
-        response.raise_for_status()
-        print(f"[DEBUG] Response status code: {response.status_code}")
-        data = response.json()
-        response_text = data.get("response", fallback_response)
+        # Try different Ollama endpoints
+        ollama_endpoints = []
         
-    except requests.exceptions.ConnectionError as e:
-        print(f"[DEBUG] Connection error details: {type(e).__name__}: {str(e)}")
-        print(f"Connection error to Ollama API: {e}")
-        response_text = "Desculpe, não consegui acessar minha intuição neste momento. Verifique se o servidor Ollama está em execução e acessível."
+        # Try environment variables first
+        if os.environ.get("OLLAMA_PUBLIC_URL"):
+            ollama_endpoints.append(os.environ.get("OLLAMA_PUBLIC_URL").rstrip('/'))
         
-    except requests.exceptions.Timeout as e:
-        print(f"[DEBUG] Timeout error with Ollama API: {e}")
-        response_text = "As energias estão demorando para alinhar-se. Tente novamente em alguns momentos."
+        if os.environ.get("OLLAMA_API_BASE"):
+            ollama_endpoints.append(os.environ.get("OLLAMA_API_BASE").rstrip('/'))
         
-    except requests.exceptions.RequestException as e:
-        print(f"[DEBUG] Error in Ollama API call: {str(e)}")
-        response_text = "Desculpe, houve um problema técnico ao acessar minha intuição... Por favor, tente novamente."
+        # Add fallback endpoints
+        ollama_endpoints.extend([
+            "http://localhost:11434",
+            "http://127.0.0.1:11434",
+            "http://host.docker.internal:11434"
+        ])
         
+        # Try each endpoint
+        for ollama_base in ollama_endpoints:
+            try:
+                print(f"Sending full response request to Ollama at: {ollama_base}")
+                response = s.post(
+                    f"{ollama_base}/api/generate",
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "temperature": temperature,
+                        "stream": False
+                    },
+                    timeout=45  # Increased timeout for VPN conditions
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return result.get("response", "")
+                
+            except Exception as endpoint_error:
+                print(f"Error with endpoint {ollama_base}: {str(endpoint_error)}")
+                continue
+        
+        # If we reach here, all endpoints failed
+        return "⚠️ Não foi possível conectar ao servidor Ollama. Verifique sua conexão ou tente novamente mais tarde."
+            
     except Exception as e:
-        print(f"[DEBUG] Unexpected error: {str(e)}")
-        response_text = fallback_response
-        
-    return response_text
+        error_message = f"Error getting full response from Ollama: {str(e)}"
+        print(error_message)
+        return "⚠️ Erro ao conectar com o servidor. Tente novamente mais tarde ou consulte o administrador do sistema."
 
 ###############################################################################
 # 5) HANDLE MESSAGES (RESTORE 'A VIDENTE' PERSONA)

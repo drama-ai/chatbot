@@ -9,6 +9,7 @@ import uuid
 import os
 import random
 import time
+import socket
 
 from context import vidente_context
 
@@ -191,82 +192,104 @@ def separate_thinking_and_response(text: str):
 # 5. Streaming Function to Call Ollama's API
 # ----------------------------------
 def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
-    """Stream responses from the Ollama API"""
+    """Stream response from Ollama API with improved reliability for VPN scenarios"""
     try:
-        # Get base URL from environment variable with fallback
-        # First check for OLLAMA_API_BASE, then OLLAMA_PUBLIC_URL
-        ollama_api_base = os.getenv('OLLAMA_API_BASE')
-        ollama_public_url = os.getenv('OLLAMA_PUBLIC_URL')
-        
-        if ollama_public_url and "/api/generate" in ollama_public_url:
-            # If OLLAMA_PUBLIC_URL includes the full path to the API endpoint,
-            # remove the /api/generate part to get the base URL
-            ollama_base = ollama_public_url.replace("/api/generate", "")
-            print(f"[DEBUG] Streaming - Using OLLAMA_PUBLIC_URL: {ollama_public_url}, extracted base: {ollama_base}")
-        elif ollama_api_base:
-            ollama_base = ollama_api_base
-            print(f"[DEBUG] Streaming - Using OLLAMA_API_BASE: {ollama_base}")
-        else:
-            ollama_base = 'http://localhost:11434'
-            print(f"[DEBUG] Streaming - Using default Ollama URL: {ollama_base}")
-        
-        # Add retries for better reliability
+        # Create a session with retries
         s = requests.Session()
-        retries = Retry(total=3, backoff_factor=0.5)
+        retries = Retry(
+            total=3,
+            backoff_factor=0.5,
+            status_forcelist=[500, 502, 503, 504],
+            allowed_methods=["GET", "POST"]
+        )
         s.mount('http://', HTTPAdapter(max_retries=retries))
         s.mount('https://', HTTPAdapter(max_retries=retries))
         
-        # Make the API call with a longer timeout
-        print(f"[DEBUG] Streaming - Sending request to {ollama_base}/api/generate")
-        response = s.post(
-            f"{ollama_base}/api/generate",
-            json={
-                "model": model,
-                "prompt": prompt,
-                "temperature": temperature,
-                "stream": True
-            },
-            stream=True,
-            timeout=30  # Increased timeout
-        )
+        # Try different Ollama endpoints
+        ollama_endpoints = []
         
-        response.raise_for_status()
-        print(f"[DEBUG] Streaming - Response status code: {response.status_code}")
+        # Try environment variables first
+        if os.environ.get("OLLAMA_PUBLIC_URL"):
+            ollama_endpoints.append(os.environ.get("OLLAMA_PUBLIC_URL").rstrip('/'))
         
-        # Process the streaming response
-        full_response = ""
-        for line in response.iter_lines(decode_unicode=True):
-            if line.strip():
-                try:
-                    data = json.loads(line)
-                    full_response += data.get("response", "")
-                    
-                    # Only yield complete responses
-                    if data.get("done", False):
-                        # If we have content to return, yield it
-                        if full_response.strip():
-                            yield full_response
-                        else:
-                            yield "Os mistérios do universo estão obscuros neste momento..."
-                except json.JSONDecodeError:
-                    continue
-                    
-    except requests.exceptions.ConnectionError as e:
-        print(f"[DEBUG] Streaming - Connection error details: {type(e).__name__}: {str(e)}")
-        print(f"Connection error to Ollama API: {e}")
-        yield "Desculpe, não consegui acessar minha intuição neste momento. Verifique se o servidor Ollama está em execução e acessível."
+        if os.environ.get("OLLAMA_API_BASE"):
+            ollama_endpoints.append(os.environ.get("OLLAMA_API_BASE").rstrip('/'))
         
-    except requests.exceptions.Timeout as e:
-        print(f"[DEBUG] Streaming - Timeout error with Ollama API: {e}")
-        print(f"Timeout error with Ollama API: {e}")
-        yield "As energias estão demorando para alinhar-se. Tente novamente em alguns momentos."
+        # Add fallback endpoints
+        ollama_endpoints.extend([
+            "http://localhost:11434",
+            "http://127.0.0.1:11434",
+            "http://host.docker.internal:11434"
+        ])
         
-    except requests.exceptions.RequestException as e:
-        print(f"[DEBUG] Streaming - Error in Ollama API call: {str(e)}")
-        print(f"Error in Ollama API call: {str(e)}")
-        yield "Desculpe, houve um problema técnico ao acessar minha intuição... Por favor, tente novamente."
+        # Try each endpoint
+        for ollama_base in ollama_endpoints:
+            try:
+                print(f"Attempting to stream response from Ollama at: {ollama_base}")
+                response = s.post(
+                    f"{ollama_base}/api/generate",
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "temperature": temperature,
+                        "stream": True
+                    },
+                    stream=True,
+                    timeout=45  # Increased timeout for VPN conditions
+                )
+                
+                if response.status_code == 200:
+                    print(f"Streaming from {ollama_base} with status {response.status_code}")
+                    for line in response.iter_lines():
+                        if line:
+                            data = json.loads(line)
+                            if "response" in data:
+                                yield data["response"]
+                    # If we successfully completed streaming, exit the function
+                    return
+                
+            except Exception as endpoint_error:
+                print(f"Error with endpoint {ollama_base}: {str(endpoint_error)}")
+                continue
         
+        # If we reach here, all endpoints failed
+        yield "\n\n⚠️ Não foi possível conectar ao servidor Ollama. Verifique sua conexão ou tente novamente mais tarde."
+            
     except Exception as e:
-        print(f"[DEBUG] Streaming - Unexpected error: {str(e)}")
-        print(f"Unexpected error: {str(e)}")
-        yield "Os astros estão em silêncio neste momento. Aguarde um instante e tente novamente..."
+        error_details = f"Error streaming from Ollama: {str(e)}"
+        print(error_details)
+        yield "\n\n⚠️ Erro ao conectar com o servidor. Tente novamente mais tarde ou consulte o administrador do sistema."
+
+# Create a custom DNS resolver function to help with VPN DNS issues
+original_getaddrinfo = socket.getaddrinfo
+
+def patched_getaddrinfo(*args, **kwargs):
+    """
+    Custom DNS resolver that helps with VPN DNS issues by trying multiple resolution methods
+    """
+    # Get the hostname from args (standard socket.getaddrinfo format)
+    hostname = args[0]
+    
+    # Known Ollama hostnames that might need special handling
+    ollama_hosts = ["localhost", "127.0.0.1", "host.docker.internal"]
+    
+    # If this is an Ollama host, try to bypass VPN DNS restrictions
+    if hostname in ollama_hosts or (isinstance(hostname, str) and "ollama" in hostname.lower()):
+        try:
+            # First try normal resolution
+            return original_getaddrinfo(*args, **kwargs)
+        except socket.gaierror:
+            # If it fails and this is localhost, force the IP
+            if hostname == "localhost":
+                # Force localhost to resolve to 127.0.0.1
+                print(f"DNS resolution failed for {hostname}, forcing to 127.0.0.1")
+                # Create a result similar to what getaddrinfo would return
+                return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, '', ('127.0.0.1', args[1]))]
+            # For other Ollama hosts, let the original exception propagate
+            raise
+    else:
+        # For non-Ollama hosts, use normal resolution
+        return original_getaddrinfo(*args, **kwargs)
+
+# Replace the DNS resolver with our custom version
+socket.getaddrinfo = patched_getaddrinfo
