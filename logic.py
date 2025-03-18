@@ -205,7 +205,7 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
         s.mount('http://', HTTPAdapter(max_retries=retries))
         s.mount('https://', HTTPAdapter(max_retries=retries))
         
-        # Try different Ollama endpoints
+        # Try different Ollama endpoints - prioritize direct IP which works better with VPNs
         ollama_endpoints = []
         
         # Try environment variables first
@@ -215,10 +215,11 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
         if os.environ.get("OLLAMA_API_BASE"):
             ollama_endpoints.append(os.environ.get("OLLAMA_API_BASE").rstrip('/'))
         
-        # Add fallback endpoints
+        # Add fallback endpoints - prioritize direct IP over localhost names
         ollama_endpoints.extend([
+            "http://127.0.0.1:11434",  # Direct IP address works better with VPNs
+            "http://0.0.0.0:11434",    # Bind address if OLLAMA_HOST is set
             "http://localhost:11434",
-            "http://127.0.0.1:11434",
             "http://host.docker.internal:11434"
         ])
         
@@ -245,6 +246,7 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
                             data = json.loads(line)
                             if "response" in data:
                                 yield data["response"]
+                    
                     # If we successfully completed streaming, exit the function
                     return
                 

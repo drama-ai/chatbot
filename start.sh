@@ -46,7 +46,12 @@ else
 fi
 
 ########################################
-# 4. Run Streamlit
+# 4. Set Ollama to listen on all interfaces to bypass VPN restrictions
+########################################
+export OLLAMA_HOST="0.0.0.0:11434"
+
+########################################
+# 5. Run Streamlit
 ########################################
 echo "[start.sh] Starting Streamlit..."
 streamlit run app.py --server.port=8501 --server.address=0.0.0.0
