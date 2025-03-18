@@ -3,6 +3,7 @@ import re
 import base64
 import os
 import random
+import requests
 
 from logic import (
     STATIC_CONTEXT,
@@ -71,7 +72,7 @@ st.markdown(f"""
     margin: 10px 0;
     padding: 10px;
     border-radius: 10px;
-    max-width: 70%;
+    max-width: 80%;
     word-wrap: break-word;
     animation: fadeIn 0.5s ease-out;
 }}
@@ -79,14 +80,12 @@ st.markdown(f"""
     background-color: #483D63;
     text-align: right;
     margin-left: auto;
-    border-left: 3px solid #9370DB;
     color: #FFFFFF;
 }}
 .assistant-message {{
     background-color: #382952;
     text-align: left;
     margin-right: auto;
-    border-right: 3px solid #BA68C8;
     color: #FFFFFF;
 }}
 @keyframes fadeIn {{
@@ -119,86 +118,104 @@ st.markdown(f"""
 [data-testid="stSpinner"] {{
     background-color: transparent !important;
 }}
-[data-testid="stSpinner"] .stSpinner {{
-    background-color: rgba(0, 0, 0, 0.4) !important;
-    color: #ffffff !important;
-    border: 2px solid #BA68C8 !important;
-    border-radius: 10px;
-    padding: 20px;
-}}
-[data-testid="stSpinner"] .stSpinner > div > div {{
-    border-color: #BA68C8 transparent transparent transparent !important;
+/* Remove form borders */
+[data-testid="stForm"] {{
+    border: none !important;
+    padding: 0 !important;
 }}
 </style>
 """, unsafe_allow_html=True)
 
 ###############################################################################
-# 3) FETCH A SINGLE, FINAL RESPONSE (NO PARTIAL REPETITIONS)
+# 3) MESSAGE MANAGEMENT 
+###############################################################################
+def add_message(role, content):
+    """Adds a message to the conversation history"""
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
+    st.session_state["messages"].append({"role": role, "content": content})
+
+def get_conversation():
+    """Returns the current conversation history"""
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
+    return st.session_state["messages"]
+
+###############################################################################
+# 4) FETCH A SINGLE, FINAL RESPONSE (NO PARTIAL REPETITIONS)
 ###############################################################################
 def get_full_ollama_response(prompt: str,
-                             model: str = "llama3.1:8b",
-                             temperature: float = 0.6,
-                             top_p: float = 0.85,
-                             top_k: int = 50,
-                             repeat_penalty: float = 1.3,
-                             num_predict: int = 256):
-    """Collect all partial chunks from stream_ollama_response into one final string."""
+                            model: str = "llama3.1:8b",
+                            temperature: float = 0.9):
+    """Get a complete, clean response from Ollama rather than streaming pieces"""
     response_text = ""
-    with st.spinner("A Vidente está consultando as energias..."):
-        for partial in stream_ollama_response(
-            prompt,
-            model=model,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            repeat_penalty=repeat_penalty,
-            num_predict=num_predict
-        ):
-            response_text += partial
+    
+    try:
+        response = requests.post(
+            f"{os.getenv('OLLAMA_API_BASE', 'http://localhost:11434')}/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "temperature": temperature,
+                "stream": False  # Changed to False to get a complete response
+            },
+            timeout=60  # Added timeout to prevent hanging
+        )
+        response.raise_for_status()
+        data = response.json()
+        response_text = data.get("response", "")
+        
+    except Exception as e:
+        print(f"Error in Ollama API call: {str(e)}")
+        response_text = f"Desculpe, houve um problema técnico ao acessar minha intuição... {str(e)}"
+        
     return response_text
 
 ###############################################################################
-# 4) HANDLE MESSAGES (RESTORE 'A VIDENTE' PERSONA)
+# 5) HANDLE MESSAGES (RESTORE 'A VIDENTE' PERSONA)
 ###############################################################################
 def handle_message(user_input: str):
     user_input = user_input.strip()
     if not user_input:
         return
-
-    # --- Tarot Game Handling ---
-    if "tarot_game" in st.session_state:
-        if user_input.lower() == "sim":
-            step = st.session_state["tarot_game"]["step"]
-            if step == 1:
-                card = draw_tarot_card()
-                st.session_state["tarot_game"]["cards"].append(card)
-                st.session_state["tarot_game"]["step"] = 2
-                add_message("assistant", f"Segunda carta: {card}. Deseja que tire a terceira carta? Responda 'sim' para continuar.")
-                return
-            elif step == 2:
-                card = draw_tarot_card()
-                st.session_state["tarot_game"]["cards"].append(card)
-                all_cards = st.session_state["tarot_game"]["cards"]
-                add_message("assistant", f"Terceira carta: {card}. Jogo concluído! Suas cartas foram: {', '.join(all_cards)}.")
-                del st.session_state["tarot_game"]
-                return
-        else:
-            add_message("assistant", "Entendido. O jogo de tarot foi encerrado.")
-            del st.session_state["tarot_game"]
-            return
-
-    if "jogo de tarot" in user_input.lower():
-        st.session_state["tarot_game"] = {"step": 1, "cards": []}
-        card = draw_tarot_card()
-        st.session_state["tarot_game"]["cards"].append(card)
-        add_message("assistant", f"Primeira carta: {card}. Deseja que tire a segunda carta? Responda 'sim' para continuar.")
+    
+    # We no longer add the user message here, as it's added in the form handler
+    # This removes the duplication problem
+    
+    # Check for tarot reading requests in user input
+    tarot_keywords = ["jogo de tarot", "tirar tarot", "leitura de tarot", "tarô", "tarot", "carta", "cartas"]
+    
+    is_tarot_request = False
+    for keyword in tarot_keywords:
+        if keyword in user_input.lower():
+            is_tarot_request = True
+            break
+    
+    # Extract the card if it's included in the message
+    card = None
+    if "carta sorteada foi:" in user_input.lower():
+        parts = user_input.split("carta sorteada foi:")
+        if len(parts) > 1:
+            card = parts[1].strip()
+    
+    if is_tarot_request:
+        # For text-based tarot requests that don't include a specific card
+        if not card:
+            card = draw_tarot_card()
+        
+        # Build prompt for card interpretation
+        prompt = f"""Você é a EKO, uma taróloga e vidente.
+                    O consulente tirou a carta: {card}.
+                    Dê uma interpretação breve mas profunda sobre esta carta 
+                    e como ela pode se relacionar com a vida do consulente."""
+                    
+        response = get_full_ollama_response(prompt)
+        add_message("assistant", response)
         return
-    # --- End Tarot Game Handling ---
 
     st.session_state["action_taken"] = True
-    add_message("user", user_input)
 
-    # Build the prompt using the old 'A Vidente' persona & custom context
+    # Build the prompt using the EKO persona & custom context
     conversation = get_conversation()
 
     # Simple tone detection
@@ -207,7 +224,6 @@ def handle_message(user_input: str):
     elif len(user_input.split()) <= 2 and re.match(r"^(oi|olá|bom dia|e aí|opa|hello)$", user_input, re.IGNORECASE):
         tone_instruction = """Cumprimente o consulente de forma acolhedora e pergunte se deseja:
         - Tirar uma carta de tarô (uma única carta)
-        - Fazer uma leitura com várias cartas (por exemplo, 3 cartas)
         - Compartilhar um segredo
         - Fazer uma pergunta
         - Desabafar
@@ -245,7 +261,7 @@ NUNCA mencione cartas de tarô específicas (como "O Mago", "A Espada", etc.) a 
         final_answer = final_answer.split("A Vidente:")[1].strip()
         
     # Remove any mentions of tarot cards if not in tarot game mode
-    if "tarot_game" not in st.session_state and not "jogo de tarot" in user_input.lower():
+    if not is_tarot_request:
         # Remove common tarot card mentions
         tarot_cards = ["O Mago", "A Sacerdotisa", "A Imperatriz", "O Imperador", 
                        "O Hierofante", "Os Enamorados", "O Carro", "A Força", 
@@ -262,7 +278,7 @@ NUNCA mencione cartas de tarô específicas (como "O Mago", "A Espada", etc.) a 
     add_message("assistant", final_answer)
 
 ###############################################################################
-# 5) SIDEBAR
+# 6) SIDEBAR
 ###############################################################################
 with st.sidebar:
     st.markdown('''
@@ -277,10 +293,10 @@ with st.sidebar:
     if st.session_state["action_taken"]:
         if st.button("🔮 Nova Consulta", key="clear"):
             clear_conversation()
-            st.experimental_rerun()
+            st.rerun()
 
 ###############################################################################
-# 6) TOP CONTAINER
+# 7) TOP CONTAINER
 ###############################################################################
 if encoded_avatar:
     st.markdown(
@@ -297,38 +313,62 @@ else:
     st.write("⚠️ Avatar not found:", avatar_path)
 
 ###############################################################################
-# 7) FORM FOR USER INPUT
-###############################################################################
-with st.form("message_form", clear_on_submit=True):
-    user_input = st.text_input("Mande sua pergunta para a Vidente...", key="user_input")
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        submitted = st.form_submit_button("Enviar")
-    with col2:
-        tarot_clicked = st.form_submit_button("Tirar Tarot")
-
-if submitted and user_input.strip():
-    handle_message(user_input)
-
-if tarot_clicked:
-    drawn_card = draw_tarot_card()
-    handle_message(f"Faça uma tiragem de Tarot para mim. A carta sorteada foi: {drawn_card}")
-
-###############################################################################
 # 8) DISPLAY MESSAGES (WITHOUT chat-container)
 ###############################################################################
-conversation = get_conversation()
-for msg in conversation:
-    role = msg["role"]
-    content = msg["content"]
-    if role == "user":
-        st.markdown(
-            f'<div class="message user-message"><strong>Consulente:</strong> {content}</div>',
-            unsafe_allow_html=True
-        )
-    else:
-        _, final_answer = separate_thinking_and_response(content)
-        st.markdown(
-            f'<div class="message assistant-message"><strong>A Vidente:</strong> {final_answer}</div>',
-            unsafe_allow_html=True
-        )
+message_container = st.container()
+with message_container:
+    conversation = get_conversation()
+    for msg in conversation:
+        role = msg["role"]
+        content = msg["content"]
+        if role == "user":
+            st.markdown(
+                f'<div class="message user-message"><strong>Consulente:</strong> {content}</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            _, final_answer = separate_thinking_and_response(content)
+            st.markdown(
+                f'<div class="message assistant-message"><strong>EKO:</strong> {final_answer}</div>',
+                unsafe_allow_html=True
+            )
+
+# Create a placeholder for new messages
+message_placeholder = st.empty()
+
+###############################################################################
+# 9) FORM FOR USER INPUT (MOVED TO BOTTOM)
+###############################################################################
+
+# Simple form without callbacks
+with st.form("message_form", clear_on_submit=True):
+    user_input = st.text_input("Mande sua pergunta para a EKO...", key="user_input")
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        submit_button = st.form_submit_button("Enviar")
+    with col2:
+        tarot_button = st.form_submit_button("Tirar Tarot")
+
+# Handle form submission immediately
+if submit_button and user_input.strip():
+    # Add user message
+    add_message("user", user_input)
+    
+    # Get response from EKO
+    handle_message(user_input)
+    
+    # Force refresh
+    st.rerun()
+    
+if tarot_button:
+    drawn_card = draw_tarot_card()
+    tarot_request = f"Faça uma tiragem de Tarot para mim. A carta sorteada foi: {drawn_card}"
+    
+    # Add user message first
+    add_message("user", tarot_request)
+    
+    # Then handle the message
+    handle_message(tarot_request)
+    
+    # Force refresh
+    st.rerun()
