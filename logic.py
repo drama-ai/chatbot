@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+from requests.adapters import Retry, HTTPAdapter
 from tinydb import TinyDB, Query
 import datetime
 import json
@@ -7,6 +8,7 @@ import re
 import uuid
 import os
 import random
+import time
 
 from context import vidente_context
 
@@ -188,70 +190,63 @@ def separate_thinking_and_response(text: str):
 # ----------------------------------
 # 5. Streaming Function to Call Ollama's API
 # ----------------------------------
-def stream_ollama_response(
-    prompt: str,
-    model: str = "llama3.1:8b",
-    temperature: float = 0.7,
-    top_p: float = 0.9,
-    top_k: int = 40,
-    repeat_penalty: float = 1.2,
-    num_predict: int = 512
-):
-    """
-    Streams text from the Ollama API using adjustable parameters
-    to reduce repetition, control creativity, etc.
-    """
-    url = st.secrets.get("OLLAMA_PUBLIC_URL", os.getenv("OLLAMA_PUBLIC_URL", "http://127.0.0.1:11434/api/generate"))
-    
-    headers = {
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-        "Accept": "application/json",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Origin": "http://localhost:8501",
-        "Referer": "http://localhost:8501/",
-        "Pragma": "no-cache",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "cross-site",
-        "X-Requested-With": "XMLHttpRequest"
-    }
-
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "options": {
-            "temperature": temperature,
-            "top_p": top_p,
-            "top_k": top_k,
-            "repeat_penalty": repeat_penalty,
-            "num_predict": num_predict
-        }
-    }
-
+def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
+    """Stream responses from the Ollama API"""
     try:
-        response = requests.post(url, json=payload, headers=headers, stream=True)
+        # Get base URL from environment variable with fallback
+        ollama_base = os.getenv('OLLAMA_API_BASE', 'http://localhost:11434')
+        
+        # Add retries for better reliability
+        s = requests.Session()
+        retries = Retry(total=3, backoff_factor=0.5)
+        s.mount('http://', HTTPAdapter(max_retries=retries))
+        s.mount('https://', HTTPAdapter(max_retries=retries))
+        
+        # Make the API call with a longer timeout
+        response = s.post(
+            f"{ollama_base}/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "temperature": temperature,
+                "stream": True
+            },
+            stream=True,
+            timeout=30  # Increased timeout
+        )
+        
         response.raise_for_status()
-    except requests.RequestException as e:
-        st.error(f"Error contacting Ollama API: {e}")
-        yield "Desculpe, ocorreu um erro ao gerar uma resposta."
-        return
-
-    # Vamos coletar toda a resposta antes de fazer qualquer processamento
-    full_response = ""
-    try:
+        
+        # Process the streaming response
+        full_response = ""
         for line in response.iter_lines(decode_unicode=True):
             if line.strip():
-                data = json.loads(line)
-                delta = data.get("response", "")
-                full_response += delta
-                
-                # Só fazemos yield se o modelo terminou de gerar
-                if data.get("done", False):
-                    _, clean_response = separate_thinking_and_response(full_response)
-                    yield clean_response
-    except json.JSONDecodeError as e:
-        st.error(f"Error decoding JSON: {e}")
+                try:
+                    data = json.loads(line)
+                    full_response += data.get("response", "")
+                    
+                    # Only yield complete responses
+                    if data.get("done", False):
+                        # If we have content to return, yield it
+                        if full_response.strip():
+                            yield full_response
+                        else:
+                            yield "Os mistérios do universo estão obscuros neste momento..."
+                except json.JSONDecodeError:
+                    continue
+                    
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error to Ollama API: {e}")
+        yield "Desculpe, não consegui acessar minha intuição neste momento. Verifique se o servidor Ollama está em execução e acessível."
+        
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error with Ollama API: {e}")
+        yield "As energias estão demorando para alinhar-se. Tente novamente em alguns momentos."
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error in Ollama API call: {str(e)}")
+        yield "Desculpe, houve um problema técnico ao acessar minha intuição... Por favor, tente novamente."
+        
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        yield "Os astros estão em silêncio neste momento. Aguarde um instante e tente novamente..."

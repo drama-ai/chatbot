@@ -1,9 +1,12 @@
-import streamlit as st
-import re
-import base64
 import os
+import re
+import json
+import time
 import random
 import requests
+from requests.adapters import Retry, HTTPAdapter
+import streamlit as st
+import base64
 
 from logic import (
     STATIC_CONTEXT,
@@ -150,24 +153,50 @@ def get_full_ollama_response(prompt: str,
     """Get a complete, clean response from Ollama rather than streaming pieces"""
     response_text = ""
     
+    # Default fallback response if API is unavailable
+    fallback_response = "Os astros estão em silêncio neste momento. Aguarde um instante e tente novamente..."
+    
     try:
-        response = requests.post(
-            f"{os.getenv('OLLAMA_API_BASE', 'http://localhost:11434')}/api/generate",
+        # Get base URL from environment variable with fallback
+        ollama_base = os.getenv('OLLAMA_API_BASE', 'http://localhost:11434')
+        
+        # Add retries for better reliability
+        s = requests.Session()
+        retries = Retry(total=3, backoff_factor=0.5)
+        s.mount('http://', HTTPAdapter(max_retries=retries))
+        s.mount('https://', HTTPAdapter(max_retries=retries))
+        
+        # Make the API call with a longer timeout
+        response = s.post(
+            f"{ollama_base}/api/generate",
             json={
                 "model": model,
                 "prompt": prompt,
                 "temperature": temperature,
-                "stream": False  # Changed to False to get a complete response
+                "stream": False
             },
-            timeout=60  # Added timeout to prevent hanging
+            timeout=30  # Increased timeout
         )
+        
         response.raise_for_status()
         data = response.json()
-        response_text = data.get("response", "")
+        response_text = data.get("response", fallback_response)
+        
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error to Ollama API: {e}")
+        response_text = "Desculpe, não consegui acessar minha intuição neste momento. Verifique se o servidor Ollama está em execução e acessível."
+        
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error with Ollama API: {e}")
+        response_text = "As energias estão demorando para alinhar-se. Tente novamente em alguns momentos."
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error in Ollama API call: {str(e)}")
+        response_text = "Desculpe, houve um problema técnico ao acessar minha intuição... Por favor, tente novamente."
         
     except Exception as e:
-        print(f"Error in Ollama API call: {str(e)}")
-        response_text = f"Desculpe, houve um problema técnico ao acessar minha intuição... {str(e)}"
+        print(f"Unexpected error: {str(e)}")
+        response_text = fallback_response
         
     return response_text
 
@@ -278,97 +307,168 @@ NUNCA mencione cartas de tarô específicas (como "O Mago", "A Espada", etc.) a 
     add_message("assistant", final_answer)
 
 ###############################################################################
-# 6) SIDEBAR
+# 6) MAIN APPLICATION
 ###############################################################################
-with st.sidebar:
-    st.markdown('''
-    <div style="text-align:left; padding:20px; margin:0;">
-      <h1 style="font-size:4rem; -webkit-text-stroke:2px black; color:white;">EKO</h1>
-      <p style="background-color:black; color:white; display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.7rem; margin-top:5px;">
-        O que é a EKO
-      </p>
-    </div>
-    <hr style='border: 1px solid #fff; margin: 10px 0;'>
-    ''', unsafe_allow_html=True)
-    if st.session_state["action_taken"]:
-        if st.button("🔮 Nova Consulta", key="clear"):
-            clear_conversation()
-            st.rerun()
+def main():
+    # Set the background image
+    st.markdown(f"""
+    <style>
+    .stApp {{
+        background: url("data:image/png;base64,{encoded_bg}") no-repeat center center fixed;
+        background-size: cover;
+    }}
+    
+    /* Hide "Press Enter" text */
+    .stTextInput div small {{
+        display: none;
+    }}
+    
+    /* Only adjust spacing to fix the gap */
+    .block-container {{
+        padding-top: 1rem;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
 
-###############################################################################
-# 7) TOP CONTAINER
-###############################################################################
-if encoded_avatar:
-    st.markdown(
-        f'''
-        <div class="eko-box">
-            <img src="data:image/png;base64,{encoded_avatar}" alt="Avatar" style="width:150px; margin: 0 auto;" />
-            {f'<img src="data:image/png;base64,{encoded_intro}" alt="Introdução EKO" style="display:block; margin:1.2rem auto; max-width:650px; height:auto;" />' if encoded_intro else ''}
-            <p class="subtitle">Vamos traçar novos destinos?</p>
-        </div>
-        ''',
-        unsafe_allow_html=True
-    )
-else:
-    st.write("⚠️ Avatar not found:", avatar_path)
-
-###############################################################################
-# 8) DISPLAY MESSAGES (WITHOUT chat-container)
-###############################################################################
-message_container = st.container()
-with message_container:
-    conversation = get_conversation()
-    for msg in conversation:
-        role = msg["role"]
-        content = msg["content"]
-        if role == "user":
+    # Fixed header area that won't scroll
+    header_container = st.container()
+    with header_container:
+        if encoded_avatar:
             st.markdown(
-                f'<div class="message user-message"><strong>Consulente:</strong> {content}</div>',
+                f'''
+                <div class="eko-box">
+                    <img src="data:image/png;base64,{encoded_avatar}" alt="Avatar" style="width:150px; margin: 0 auto;" />
+                    {f'<img src="data:image/png;base64,{encoded_intro}" alt="Introdução EKO" style="display:block; margin:1.2rem auto; max-width:650px; height:auto;" />' if encoded_intro else ''}
+                    <p class="subtitle">Vamos traçar novos destinos?</p>
+                </div>
+                ''',
                 unsafe_allow_html=True
             )
         else:
-            _, final_answer = separate_thinking_and_response(content)
-            st.markdown(
-                f'<div class="message assistant-message"><strong>EKO:</strong> {final_answer}</div>',
-                unsafe_allow_html=True
-            )
+            st.write("⚠️ Avatar not found:", avatar_path)
+    
+    # Initialize conversation if needed
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
+    
+    # Get the conversation
+    conversation = get_conversation()
+    
+    # Only show the message container if there are messages
+    if len(conversation) > 0:
+        # Create scrollable message container with fixed height
+        message_container = st.container(height=400, border=False)
+        with message_container:
+            # Create a placeholder for JavaScript injection
+            js_placeholder = st.empty()
+            
+            for msg in conversation:
+                if msg["role"] == "user":
+                    st.markdown(
+                        f'<div class="message user-message"><strong>Consulente:</strong> {msg["content"]}</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    _, final_answer = separate_thinking_and_response(msg["content"])
+                    st.markdown(
+                        f'<div class="message assistant-message"><strong>EKO:</strong> {final_answer}</div>',
+                        unsafe_allow_html=True
+                    )
+            
+            # Add JavaScript for auto-scrolling to the bottom of the message container
+            js_placeholder.markdown("""
+            <script>
+                // Function to scroll all scrollable containers to the bottom
+                function scrollToBottom() {
+                    const containers = window.parent.document.querySelectorAll('[data-testid="stVerticalBlock"]');
+                    containers.forEach(container => {
+                        if (container.scrollHeight > container.clientHeight) {
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    });
+                }
+                
+                // Call immediately and after delays to ensure it works
+                scrollToBottom();
+                setTimeout(scrollToBottom, 200);
+                setTimeout(scrollToBottom, 500);
+            </script>
+            """, unsafe_allow_html=True)
+    
+    # Fixed footer area for input
+    footer_container = st.container()
+    with footer_container:
+        # Create a placeholder for the spinner/loading message
+        spinner_placeholder = st.empty()
+        
+        # Using st.chat_input instead of form for a cleaner chat experience
+        user_input = st.chat_input("Mande sua pergunta para a EKO...", key="user_input")
+        
+        # Center the Tarot button at the bottom with proper spacing
+        st.markdown("<br>", unsafe_allow_html=True)  # Add spacing
+        
+        # Simplify approach - just use a regular Streamlit button with custom styling
+        st.markdown("""
+        <style>
+        /* Style the Tarot button */
+        .stButton > button {
+            background-color: #4E386F !important;
+            color: white !important;
+            border: none !important;
+            padding: 10px !important;
+            text-align: center !important;
+            text-decoration: none !important;
+            font-size: 16px !important;
+            margin: 4px auto !important;
+            cursor: pointer !important;
+            border-radius: 8px !important;
+            white-space: nowrap !important;
+            display: block !important;
+            width: 200px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+        
+        /* Center the button container */
+        div.row-widget.stButton {
+            text-align: center !important;
+            margin-bottom: 15px !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Use a centered column for the button
+        col1, col2, col3 = st.columns([0.4, 0.2, 0.4])
+        with col2:
+            tarot_button = st.button("Tirar Tarot", key="tarot_btn")
+        
+        # Handle user text input
+        if user_input and user_input.strip():
+            st.session_state["action_taken"] = True
+            add_message("user", user_input)
+            
+            # Show spinner in the placeholder
+            with spinner_placeholder.container():
+                with st.spinner("EKO está consultando os astros..."):
+                    handle_message(user_input)
+            
+            st.rerun()
+        
+        # Handle tarot button click    
+        if tarot_button:
+            st.session_state["action_taken"] = True
+            drawn_card = draw_tarot_card()
+            tarot_request = f"A carta sorteada foi: {drawn_card}"
+            
+            # Add user message first
+            add_message("user", tarot_request)
+            
+            # Show spinner in the placeholder
+            with spinner_placeholder.container():
+                with st.spinner("EKO está interpretando a carta..."):
+                    handle_message(tarot_request)
+            
+            st.rerun()
 
-# Create a placeholder for new messages
-message_placeholder = st.empty()
-
-###############################################################################
-# 9) FORM FOR USER INPUT (MOVED TO BOTTOM)
-###############################################################################
-
-# Simple form without callbacks
-with st.form("message_form", clear_on_submit=True):
-    user_input = st.text_input("Mande sua pergunta para a EKO...", key="user_input")
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        submit_button = st.form_submit_button("Enviar")
-    with col2:
-        tarot_button = st.form_submit_button("Tirar Tarot")
-
-# Handle form submission immediately
-if submit_button and user_input.strip():
-    # Add user message
-    add_message("user", user_input)
-    
-    # Get response from EKO
-    handle_message(user_input)
-    
-    # Force refresh
-    st.rerun()
-    
-if tarot_button:
-    drawn_card = draw_tarot_card()
-    tarot_request = f"Faça uma tiragem de Tarot para mim. A carta sorteada foi: {drawn_card}"
-    
-    # Add user message first
-    add_message("user", tarot_request)
-    
-    # Then handle the message
-    handle_message(tarot_request)
-    
-    # Force refresh
-    st.rerun()
+if __name__ == "__main__":
+    main()
