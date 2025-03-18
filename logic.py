@@ -194,7 +194,21 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
     """Stream responses from the Ollama API"""
     try:
         # Get base URL from environment variable with fallback
-        ollama_base = os.getenv('OLLAMA_API_BASE', 'http://localhost:11434')
+        # First check for OLLAMA_API_BASE, then OLLAMA_PUBLIC_URL
+        ollama_api_base = os.getenv('OLLAMA_API_BASE')
+        ollama_public_url = os.getenv('OLLAMA_PUBLIC_URL')
+        
+        if ollama_public_url and "/api/generate" in ollama_public_url:
+            # If OLLAMA_PUBLIC_URL includes the full path to the API endpoint,
+            # remove the /api/generate part to get the base URL
+            ollama_base = ollama_public_url.replace("/api/generate", "")
+            print(f"[DEBUG] Streaming - Using OLLAMA_PUBLIC_URL: {ollama_public_url}, extracted base: {ollama_base}")
+        elif ollama_api_base:
+            ollama_base = ollama_api_base
+            print(f"[DEBUG] Streaming - Using OLLAMA_API_BASE: {ollama_base}")
+        else:
+            ollama_base = 'http://localhost:11434'
+            print(f"[DEBUG] Streaming - Using default Ollama URL: {ollama_base}")
         
         # Add retries for better reliability
         s = requests.Session()
@@ -203,6 +217,7 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
         s.mount('https://', HTTPAdapter(max_retries=retries))
         
         # Make the API call with a longer timeout
+        print(f"[DEBUG] Streaming - Sending request to {ollama_base}/api/generate")
         response = s.post(
             f"{ollama_base}/api/generate",
             json={
@@ -216,6 +231,7 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
         )
         
         response.raise_for_status()
+        print(f"[DEBUG] Streaming - Response status code: {response.status_code}")
         
         # Process the streaming response
         full_response = ""
@@ -236,17 +252,21 @@ def stream_ollama_response(prompt, model="llama3.1:8b", temperature=0.9):
                     continue
                     
     except requests.exceptions.ConnectionError as e:
+        print(f"[DEBUG] Streaming - Connection error details: {type(e).__name__}: {str(e)}")
         print(f"Connection error to Ollama API: {e}")
         yield "Desculpe, não consegui acessar minha intuição neste momento. Verifique se o servidor Ollama está em execução e acessível."
         
     except requests.exceptions.Timeout as e:
+        print(f"[DEBUG] Streaming - Timeout error with Ollama API: {e}")
         print(f"Timeout error with Ollama API: {e}")
         yield "As energias estão demorando para alinhar-se. Tente novamente em alguns momentos."
         
     except requests.exceptions.RequestException as e:
+        print(f"[DEBUG] Streaming - Error in Ollama API call: {str(e)}")
         print(f"Error in Ollama API call: {str(e)}")
         yield "Desculpe, houve um problema técnico ao acessar minha intuição... Por favor, tente novamente."
         
     except Exception as e:
+        print(f"[DEBUG] Streaming - Unexpected error: {str(e)}")
         print(f"Unexpected error: {str(e)}")
         yield "Os astros estão em silêncio neste momento. Aguarde um instante e tente novamente..."
