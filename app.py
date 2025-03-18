@@ -1,4 +1,9 @@
 import streamlit as st
+import re
+import base64
+import os
+import random
+
 from logic import (
     STATIC_CONTEXT,
     draw_tarot_card,
@@ -8,106 +13,12 @@ from logic import (
     separate_thinking_and_response,
     stream_ollama_response
 )
-import re
-import base64
-import os
-import random
 
-# Tarot cards dictionary (local definition)
-cartas_tarot = {
-    1: {"nome": "O Mago"},
-    2: {"nome": "A Sacerdotisa"},
-    3: {"nome": "A Imperatriz"},
-    4: {"nome": "O Imperador"},
-    5: {"nome": "O Hierofante"},
-    6: {"nome": "Os Enamorados"},
-    7: {"nome": "O Carro"},
-    8: {"nome": "A Força"},
-    9: {"nome": "O Eremita"},
-    10: {"nome": "A Roda da Fortuna"},
-    11: {"nome": "A Justiça"},
-    12: {"nome": "O Enforcado"},
-    13: {"nome": "A Morte"},
-    14: {"nome": "A Temperança"},
-    15: {"nome": "O Diabo"},
-    16: {"nome": "A Torre"},
-    17: {"nome": "A Estrela"},
-    18: {"nome": "A Lua"},
-    19: {"nome": "O Sol"},
-    20: {"nome": "O Julgamento"},
-    21: {"nome": "O Mundo"},
-    22: {"nome": "O Louco"},
-    # Paus
-    23: {"nome": "Ás de Paus"},
-    24: {"nome": "Dois de Paus"},
-    25: {"nome": "Três de Paus"},
-    26: {"nome": "Quatro de Paus"},
-    27: {"nome": "Cinco de Paus"},
-    28: {"nome": "Seis de Paus"},
-    29: {"nome": "Sete de Paus"},
-    30: {"nome": "Oito de Paus"},
-    31: {"nome": "Nove de Paus"},
-    32: {"nome": "Dez de Paus"},
-    33: {"nome": "Valete de Paus"},
-    34: {"nome": "Cavaleiro de Paus"},
-    35: {"nome": "Rainha de Paus"},
-    36: {"nome": "Rei de Paus"},
-    # Espadas
-    37: {"nome": "Ás de Espadas"},
-    38: {"nome": "Dois de Espadas"},
-    39: {"nome": "Três de Espadas"},
-    40: {"nome": "Quatro de Espadas"},
-    41: {"nome": "Cinco de Espadas"},
-    42: {"nome": "Seis de Espadas"},
-    43: {"nome": "Sete de Espadas"},
-    44: {"nome": "Oito de Espadas"},
-    45: {"nome": "Nove de Espadas"},
-    46: {"nome": "Dez de Espadas"},
-    47: {"nome": "Valete de Espadas"},
-    48: {"nome": "Cavaleiro de Espadas"},
-    49: {"nome": "Rainha de Espadas"},
-    50: {"nome": "Rei de Espadas"},
-    # Copas
-    51: {"nome": "Ás de Copas"},
-    52: {"nome": "Dois de Copas"},
-    53: {"nome": "Três de Copas"},
-    54: {"nome": "Quatro de Copas"},
-    55: {"nome": "Cinco de Copas"},
-    56: {"nome": "Seis de Copas"},
-    57: {"nome": "Sete de Copas"},
-    58: {"nome": "Oito de Copas"},
-    59: {"nome": "Nove de Copas"},
-    60: {"nome": "Dez de Copas"},
-    61: {"nome": "Valete de Copas"},
-    62: {"nome": "Cavaleiro de Copas"},
-    63: {"nome": "Rainha de Copas"},
-    64: {"nome": "Rei de Copas"},
-    # Ouros
-    65: {"nome": "Ás de Ouros"},
-    66: {"nome": "Dois de Ouros"},
-    67: {"nome": "Três de Ouros"},
-    68: {"nome": "Quatro de Ouros"},
-    69: {"nome": "Cinco de Ouros"},
-    70: {"nome": "Seis de Ouros"},
-    71: {"nome": "Sete de Ouros"},
-    72: {"nome": "Oito de Ouros"},
-    73: {"nome": "Nove de Ouros"},
-    74: {"nome": "Dez de Ouros"},
-    75: {"nome": "Valete de Ouros"},
-    76: {"nome": "Cavaleiro de Ouros"},
-    77: {"nome": "Rainha de Ouros"},
-    78: {"nome": "Rei de Ouros"}
-}
+###############################################################################
+# 1) PAGE CONFIG & HELPER
+###############################################################################
+st.set_page_config(initial_sidebar_state="collapsed")
 
-##########################
-# Session State
-##########################
-if "action_taken" not in st.session_state:
-    st.session_state["action_taken"] = False  # Tracks whether user has interacted
-
-##########################
-# Helper Functions
-##########################
 def get_base64_image(image_path: str) -> str:
     if not os.path.exists(image_path):
         return ""
@@ -115,14 +26,141 @@ def get_base64_image(image_path: str) -> str:
         data = f.read()
     return base64.b64encode(data).decode("utf-8")
 
-def draw_tarot_card():
-    card_number = random.randint(1, 78)
-    return cartas_tarot[card_number]["nome"]
+# Load images
+bg_path = "assets/background2.png"
+encoded_bg = get_base64_image(bg_path)
 
+avatar_path = "assets/ecoicone.png"
+encoded_avatar = get_base64_image(avatar_path)
+
+intro_path = "assets/IntroduçãoEKO.png"
+encoded_intro = get_base64_image(intro_path)
+
+if "action_taken" not in st.session_state:
+    st.session_state["action_taken"] = False
+
+###############################################################################
+# 2) INJECT CSS AT THE TOP (NO chat-container)
+###############################################################################
+st.markdown(f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+.stApp {{
+    background: url("data:image/png;base64,{encoded_bg}") no-repeat center center fixed;
+    background-size: cover;
+}}
+.stMainBlockContainer {{
+    max-width: 1000px !important;
+    margin: 0 auto !important;
+}}
+[data-testid="stAppViewContainer"] {{
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    margin: 0 auto;
+}}
+.stApp, .stApp * {{
+    font-family: 'Press Start 2P', monospace !important;
+    letter-spacing: 0.5px;
+}}
+
+/* We remove .chat-container entirely to avoid the empty purple box. */
+
+/* Chat bubble styling only */
+.message {{
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 70%;
+    word-wrap: break-word;
+    animation: fadeIn 0.5s ease-out;
+}}
+.user-message {{
+    background-color: #483D63;
+    text-align: right;
+    margin-left: auto;
+    border-left: 3px solid #9370DB;
+    color: #FFFFFF;
+}}
+.assistant-message {{
+    background-color: #382952;
+    text-align: left;
+    margin-right: auto;
+    border-right: 3px solid #BA68C8;
+    color: #FFFFFF;
+}}
+@keyframes fadeIn {{
+    from {{ opacity: 0; transform: translateY(10px); }}
+    to {{ opacity: 1; transform: translateY(0); }}
+}}
+.eko-box {{
+    background-color: transparent;
+    color: #000000;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+}}
+.stButton button {{
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    padding: 8px 16px;
+    margin: 5px;
+    cursor: pointer;
+}}
+[data-testid="stSidebar"] {{
+    background-color: transparent !important;
+}}
+[data-testid="stSpinner"] {{
+    background-color: transparent !important;
+}}
+[data-testid="stSpinner"] .stSpinner {{
+    background-color: rgba(0, 0, 0, 0.4) !important;
+    color: #ffffff !important;
+    border: 2px solid #BA68C8 !important;
+    border-radius: 10px;
+    padding: 20px;
+}}
+[data-testid="stSpinner"] .stSpinner > div > div {{
+    border-color: #BA68C8 transparent transparent transparent !important;
+}}
+</style>
+""", unsafe_allow_html=True)
+
+###############################################################################
+# 3) FETCH A SINGLE, FINAL RESPONSE (NO PARTIAL REPETITIONS)
+###############################################################################
+def get_full_ollama_response(prompt: str,
+                             model: str = "llama3.1:8b",
+                             temperature: float = 0.6,
+                             top_p: float = 0.85,
+                             top_k: int = 50,
+                             repeat_penalty: float = 1.3,
+                             num_predict: int = 256):
+    """Collect all partial chunks from stream_ollama_response into one final string."""
+    response_text = ""
+    with st.spinner("A Vidente está consultando as energias..."):
+        for partial in stream_ollama_response(
+            prompt,
+            model=model,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            repeat_penalty=repeat_penalty,
+            num_predict=num_predict
+        ):
+            response_text += partial
+    return response_text
+
+###############################################################################
+# 4) HANDLE MESSAGES (RESTORE 'A VIDENTE' PERSONA)
+###############################################################################
 def handle_message(user_input: str):
-    """
-    Takes the user's text, adds it to the conversation, and streams a single response.
-    """
     user_input = user_input.strip()
     if not user_input:
         return
@@ -159,8 +197,11 @@ def handle_message(user_input: str):
 
     st.session_state["action_taken"] = True
     add_message("user", user_input)
+
+    # Build the prompt using the old 'A Vidente' persona & custom context
     conversation = get_conversation()
 
+    # Simple tone detection
     if re.search(r'\b(astrologia|signos|horóscopo)\b', user_input, re.IGNORECASE):
         tone_instruction = "Os astros traçam caminhos, mas cada um tem seu próprio brilho no céu. O que realmente deseja compreender sobre sua jornada?"
     elif len(user_input.split()) <= 2 and re.match(r"^(oi|olá|bom dia|e aí|opa|hello)$", user_input, re.IGNORECASE):
@@ -175,253 +216,63 @@ def handle_message(user_input: str):
     else:
         tone_instruction = "Responda de maneira enigmática e simbolicamente rica, caso o tema permita."
 
-    prompt = f"""Você é Eko, uma entidade enigmática e mística com a seguinte personalidade e contexto:\n\n{STATIC_CONTEXT}\n\n
-    {tone_instruction}
-    Evite repetir instruções ou lembretes sobre sua própria conduta na resposta.\n\n"""
+    # Restored persona as 'A Vidente' referencing the context
+    prompt = f"""Você é A Vidente, uma entidade enigmática e mística com a seguinte personalidade e contexto:
+{STATIC_CONTEXT}
+
+{tone_instruction}
+Evite repetir instruções ou lembretes sobre sua própria conduta na resposta.
+
+"""
+
+    # Add conversation history
     history = "\n".join(
-        f"{'Consulente' if msg['role'] == 'user' else 'Eko'}: {msg['content']}"
+        f"{'Consulente' if msg['role'] == 'user' else 'A Vidente'}: {msg['content']}"
         for msg in conversation
     )
-    prompt += history + "\nEko:"
+    prompt += history + "\nA Vidente:"
 
-    final_stream_response = ""
-    with st.spinner("Eko estou consultando as energias..."):
-        for partial in stream_ollama_response(
-            prompt,
-            model="llama3.1:8b",
-            temperature=0.6,
-            top_p=0.85,
-            top_k=50,
-            repeat_penalty=1.3,
-            num_predict=256
-        ):
-            final_stream_response = partial
+    # Get final text (no partial repeated lines)
+    final_response = get_full_ollama_response(prompt)
 
-    _, final_answer = separate_thinking_and_response(final_stream_response)
+    # Clean up
+    _, final_answer = separate_thinking_and_response(final_response)
     final_answer = final_answer.replace('"', '')
     final_answer = re.sub(r'\(.*?\)', '', final_answer)
-    if "Eko:" in final_answer:
-        final_answer = final_answer.split("Eko:")[1].strip()
+    if "A Vidente:" in final_answer:
+        final_answer = final_answer.split("A Vidente:")[1].strip()
     final_answer = re.sub(r'Observação:.*', '', final_answer, flags=re.DOTALL).strip()
+
+    # Save assistant's final response
     add_message("assistant", final_answer)
 
-##########################
-# Load Images & Background
-##########################
-bg_path = "assets/background.jpg"
-encoded_bg = get_base64_image(bg_path)
-
-avatar_path = "assets/ecoicone.png"
-encoded_avatar = get_base64_image(avatar_path)
-
-##########################
-# CSS Styling
-##########################
-st.markdown(
-    f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-    
-    .stApp {{
-        background: url("data:image/jpg;base64,{encoded_bg}") no-repeat center center fixed;
-        background-size: cover;
-    }}
-    .stMainBlockContainer {{
-        max-width: 1000px !important;
-        margin: 0 auto !important;
-    }}
-    [data-testid="stAppViewContainer"] {{
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-        margin: 0 auto;
-    }}
-    .stApp, .stApp * {{
-        font-family: 'Press Start 2P', monospace !important;
-        letter-spacing: 0.5px;
-    }}
-    .chat-container {{
-        max-width: 1000px;
-        margin: 20px auto;
-        padding: 20px;
-        background: #2D243A;
-        border-radius: 10px;
-        box-shadow: 0 2px 20px rgba(186, 104, 200, 0.25);
-        border: 1rem solid black;
-    }}
-    .message {{
-        margin: 10px 0;
-        padding: 10px;
-        border-radius: 10px;
-        max-width: 70%;
-        word-wrap: break-word;
-        animation: fadeIn 0.5s ease-out;
-    }}
-    .user-message {{
-        background-color: #483D63;
-        text-align: right;
-        margin-left: auto;
-        border-left: 3px solid #9370DB;
-        color: #FFFFFF;
-    }}
-    .assistant-message {{
-        background-color: #382952;
-        text-align: left;
-        margin-right: auto;
-        border-right: 3px solid #BA68C8;
-        color: #FFFFFF;
-    }}
-    .model-thought {{
-        font-style: italic;
-        color: #888888;
-        font-size: 0.9em;
-    }}
-    @keyframes fadeIn {{
-        from {{ opacity: 0; transform: translateY(10px); }}
-        to {{ opacity: 1; transform: translateY(0); }}
-    }}
-    .clear-button {{
-        background-color: #FF6F61;
-        border: none;
-        color: white;
-        padding: 8px 16px;
-        font-size: 14px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }}
-    .clear-button:hover {{
-        background-color: #E65C50;
-    }}
-    .header-left {{
-        text-align: left;
-        padding: 20px;
-        margin: 0;
-    }}
-    .header-left h1 {{
-        font-size: 4rem;
-        margin: 0;
-        -webkit-text-stroke: 2px black;
-        color: white;
-    }}
-    .header-left p {{
-        background-color: black;
-        color: white;
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 20px;
-        font-size: 0.7rem;
-        margin-top: 5px;
-    }}
-    .info-icon {{
-        display: inline-block;
-        position: relative;
-        font-size: 1.2rem;
-        cursor: help;
-        margin-left: 10px;
-    }}
-    .info-icon .tooltip-text {{
-        visibility: hidden;
-        width: 280px;
-        background-color: rgba(0, 0, 0, 0.8);
-        color: #fff;
-        text-align: center;
-        border-radius: 6px;
-        padding: 8px 10px;
-        position: absolute;
-        z-index: 1;
-        bottom: 125%;
-        left: 50%;
-        margin-left: -140px;
-        font-size: 0.7rem;
-    }}
-    .info-icon:hover .tooltip-text {{
-        visibility: visible;
-    }}
-    .eko-box {{
-        background-color: #EEEEEE;
-        color: #000000;
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        margin-bottom: 20px;
-        max-width: 1000px;
-        margin-left: auto;
-        margin-right: auto;
-    }}
-    .eko-box hr {{
-        border: 1px solid #000000;
-        width: 80%;
-        margin: 10px auto;
-    }}
-    .stButton button {{
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 1px solid #cccccc;
-        border-radius: 5px;
-        padding: 8px 16px;
-        margin: 5px;
-        cursor: pointer;
-    }}
-    [data-testid="stSidebar"] {{
-        background-color: transparent !important;
-    }}
-    [data-testid="stSpinner"] {{
-        background-color: transparent !important;
-    }}
-    [data-testid="stSpinner"] .stSpinner {{
-        background-color: rgba(0, 0, 0, 0.4) !important;
-        color: #ffffff !important;
-        border: 2px solid #BA68C8 !important;
-        border-radius: 10px;
-        padding: 20px;
-    }}
-    [data-testid="stSpinner"] .stSpinner > div > div {{
-        border-color: #BA68C8 transparent transparent transparent !important;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-##########################
-# Sidebar with model parameter controls
-##########################
+###############################################################################
+# 5) SIDEBAR
+###############################################################################
 with st.sidebar:
-    st.markdown(
-        '''
-        <div class="header-left">
-          <h1>EKO</h1>
-          <p>O que é a EKO</p>
-        </div>
-        ''',
-        unsafe_allow_html=True
-    )
-    st.markdown("<hr style='border: 1px solid #fff; margin: 10px 0;'>", unsafe_allow_html=True)
-
+    st.markdown('''
+    <div style="text-align:left; padding:20px; margin:0;">
+      <h1 style="font-size:4rem; -webkit-text-stroke:2px black; color:white;">EKO</h1>
+      <p style="background-color:black; color:white; display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.7rem; margin-top:5px;">
+        O que é a EKO
+      </p>
+    </div>
+    <hr style='border: 1px solid #fff; margin: 10px 0;'>
+    ''', unsafe_allow_html=True)
     if st.session_state["action_taken"]:
         if st.button("🔮 Nova Consulta", key="clear"):
             clear_conversation()
             st.experimental_rerun()
 
-    st.session_state["temperature"] = st.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
-    st.session_state["top_p"] = st.slider("Top P", 0.0, 1.0, 0.9, 0.05)
-    st.session_state["top_k"] = st.slider("Top K", 1, 100, 40, 1)
-    st.session_state["repeat_penalty"] = st.slider("Repeat Penalty", 1.0, 2.0, 1.2, 0.1)
-    st.session_state["num_predict"] = st.slider("Max Tokens (num_predict)", 64, 1024, 512, 32)
-
-##########################
-# Main Content
-##########################
-
-st.markdown("---")
-
+###############################################################################
+# 6) TOP CONTAINER
+###############################################################################
 if encoded_avatar:
     st.markdown(
         f'''
         <div class="eko-box">
             <img src="data:image/png;base64,{encoded_avatar}" alt="Avatar" style="width:150px; margin: 0 auto;" />
-            <hr />
-            <h1 class="main-title">✨Oi, eu sou a EKO✨</h1>
+            {f'<img src="data:image/png;base64,{encoded_intro}" alt="Introdução EKO" style="display:block; margin:1.2rem auto; max-width:650px; height:auto;" />' if encoded_intro else ''}
             <p class="subtitle">Vamos traçar novos destinos?</p>
         </div>
         ''',
@@ -430,7 +281,27 @@ if encoded_avatar:
 else:
     st.write("⚠️ Avatar not found:", avatar_path)
 
-st.markdown("### 📜 Sua Consulta com a Vidente")
+###############################################################################
+# 7) FORM FOR USER INPUT
+###############################################################################
+with st.form("message_form", clear_on_submit=True):
+    user_input = st.text_input("Mande sua pergunta para a Vidente...", key="user_input")
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        submitted = st.form_submit_button("Enviar")
+    with col2:
+        tarot_clicked = st.form_submit_button("Tirar Tarot")
+
+if submitted and user_input.strip():
+    handle_message(user_input)
+
+if tarot_clicked:
+    drawn_card = draw_tarot_card()
+    handle_message(f"Faça uma tiragem de Tarot para mim. A carta sorteada foi: {drawn_card}")
+
+###############################################################################
+# 8) DISPLAY MESSAGES (WITHOUT chat-container)
+###############################################################################
 conversation = get_conversation()
 for msg in conversation:
     role = msg["role"]
@@ -441,46 +312,8 @@ for msg in conversation:
             unsafe_allow_html=True
         )
     else:
-        thinking_parts, final_answer = separate_thinking_and_response(content)
+        _, final_answer = separate_thinking_and_response(content)
         st.markdown(
-            f'<div class="message assistant-message"><strong>Eko:</strong> {final_answer}</div>',
+            f'<div class="message assistant-message"><strong>A Vidente:</strong> {final_answer}</div>',
             unsafe_allow_html=True
         )
-
-st.markdown(
-    """
-    <div style="text-align:center; margin-bottom: 20px;">
-      <span class="info-icon">ℹ️
-        <span class="tooltip-text">
-          você pode falar diretamente com o oráculo, tirar tarot, ou ler a sua sorte. 
-          como posso te ajudar hoje?
-        </span>
-      </span>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-def submit_message():
-    if st.session_state.get('user_input', '').strip():
-        st.session_state['action_taken'] = True
-        handle_message(st.session_state['user_input'])
-        st.session_state['user_input'] = ''
-
-user_input = st.text_input("Mande sua pergunta para a EKO...", key="user_input", on_change=submit_message)
-
-colA, colB, colC = st.columns([1,1,1])
-with colA:
-    if st.button("Enviar"):
-        submit_message()
-with colB:
-    if st.button("🔮 Tirar Tarot"):
-        st.session_state["action_taken"] = True
-        drawn_card = draw_tarot_card()
-        handle_message(f"Faça uma tiragem de Tarot para mim. A carta sorteada foi: {drawn_card}")
-with colC:
-    if st.button("leia sua sorte"):
-        st.session_state["action_taken"] = True
-        handle_message("Leia minha sorte, por favor!")
-
-st.markdown('</div>', unsafe_allow_html=True)
