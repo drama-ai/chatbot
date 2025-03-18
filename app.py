@@ -126,37 +126,6 @@ st.markdown(f"""
     border: none !important;
     padding: 0 !important;
 }}
-
-/* CHANGED: Make the text input placeholder and text smaller to avoid scrolling */
-.stTextInput input, .stTextInput input::placeholder {{
-    font-size: 0.85rem !important;
-}}
-
-/* Responsive adjustments for mobile devices */
-@media only screen and (max-width: 768px) {{
-    .stMainBlockContainer {{
-        max-width: 100% !important;
-        padding: 0 1rem;
-    }}
-    .eko-box {{
-        margin: 0 1rem;
-        padding: 10px;
-    }}
-    .message {{
-        font-size: 0.8rem;
-        padding: 8px;
-    }}
-    .stButton button {{
-        width: 100% !important;
-        font-size: 1rem !important;
-        padding: 10px !important;
-        margin: 5px 0 !important;
-    }}
-    [data-testid="stAppViewContainer"] {{
-        padding-top: 0.5rem;
-        padding-bottom: 0.5rem;
-    }}
-}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -403,8 +372,7 @@ def main():
                 f'''
                 <div class="eko-box">
                     <img src="data:image/png;base64,{encoded_avatar}" alt="Avatar" style="width:150px; margin: 0 auto;" />
-                    <!-- CHANGED: Reduced max-width from 650px to 400px, plus width:100% -->
-                    {f'<img src="data:image/png;base64,{encoded_intro}" alt="Introdução EKO" style="display:block; margin:1.2rem auto; width:100%; max-width:400px; height:auto;" />' if encoded_intro else ''}
+                    {f'<img src="data:image/png;base64,{encoded_intro}" alt="Introdução EKO" style="display:block; margin:1.2rem auto; max-width:650px; height:auto;" />' if encoded_intro else ''}
                     <p class="subtitle">Vamos traçar novos destinos?</p>
                 </div>
                 ''',
@@ -423,7 +391,7 @@ def main():
     # Only show the message container if there are messages
     if len(conversation) > 0:
         # Create scrollable message container with fixed height
-        message_container = st.container()
+        message_container = st.container(height=400, border=False)
         with message_container:
             # Create a placeholder for JavaScript injection
             js_placeholder = st.empty()
@@ -503,6 +471,7 @@ def main():
         </style>
         """, unsafe_allow_html=True)
         
+        # Use a centered column for the button
         col1, col2, col3 = st.columns([0.4, 0.2, 0.4])
         with col2:
             tarot_button = st.button("Tirar Tarot", key="tarot_btn")
@@ -511,22 +480,29 @@ def main():
         if user_input and user_input.strip():
             st.session_state["action_taken"] = True
             add_message("user", user_input)
-            handle_message(user_input)
-            st.experimental_rerun()
+            
+            # Show spinner in the placeholder
+            with spinner_placeholder.container():
+                with st.spinner("EKO está consultando os astros..."):
+                    handle_message(user_input)
+            
+            st.rerun()
         
-        # Handle tarot button
+        # Handle tarot button click    
         if tarot_button:
             st.session_state["action_taken"] = True
-            # Directly request a tarot reading
-            handle_message("Gostaria de tirar uma carta de tarot.")
-            st.experimental_rerun()
-
-###############################################################################
-# 7) CLEAR CONVERSATION
-###############################################################################
-if st.sidebar.button("Nova Consulta"):
-    clear_conversation()
-    st.experimental_rerun()
+            drawn_card = draw_tarot_card()
+            tarot_request = f"A carta sorteada foi: {drawn_card}"
+            
+            # Add user message first
+            add_message("user", tarot_request)
+            
+            # Show spinner in the placeholder
+            with spinner_placeholder.container():
+                with st.spinner("EKO está interpretando a carta..."):
+                    handle_message(tarot_request)
+            
+            st.rerun()
 
 if __name__ == "__main__":
     main()
