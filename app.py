@@ -511,7 +511,7 @@ def main():
 
         @media (max-width: 1000px) {
     .intro-img {
-        max-width: 400px !important;
+        max-width: 200px !important;
     }
         }
         .stButton > button {
