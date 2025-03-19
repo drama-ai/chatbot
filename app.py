@@ -492,7 +492,7 @@ def main():
         spinner_placeholder = st.empty()
 
         # Using st.chat_input instead of form for a cleaner chat experience
-        user_input = st.chat_input("Mande sua pergunta para a EKO...", key="user_input")
+        user_input = st.chat_input("Mensagem para a EKO", key="user_input")
 
         # Center the Tarot button at the bottom with proper spacing
         st.markdown("<br>", unsafe_allow_html=True)  # Add spacing
