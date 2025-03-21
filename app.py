@@ -511,7 +511,38 @@ def main():
 
         @media (max-width: 1000px) {
     .intro-img {
-        max-width: 300px !important;
+        max-width: 280px !important;
+    }
+    /* Slightly decrease font size for all elements on mobile */
+    .stApp, .stApp * {
+        font-size: .98em !important;
+    }
+    /* Ensure chat input and buttons remain readable */
+    .stButton > button {
+        font-size: 16px !important;
+    }
+    /* Ensure messages are readable */
+    .message {
+        font-size: 0.97em !important;
+    }
+    /* Add margin to the top of content */
+    .block-container {
+        margin-top: 15px !important;
+    }
+    /* Make the Tarot button smaller on mobile using the exact class name */
+    div.stVerticalBlock button,
+    div.stHorizontalBlock button {
+        width: 120px !important;
+        padding: 4px !important;
+        font-size: 10px !important;
+    }
+    /* Decrease space between elements */
+    div.stVerticalBlock,
+    div.stHorizontalBlock {
+        margin-top: -5px !important;
+        margin-bottom: 5px !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
     }
         }
         .stButton > button {
