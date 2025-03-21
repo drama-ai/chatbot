@@ -129,6 +129,38 @@ st.markdown(
     border: none !important;
     padding: 0 !important;
 }}
+
+/* Fix text input field alignment */
+div[data-testid="stChatInput"] {{
+    display: flex !important;
+    align-items: center !important;
+}}
+
+div[data-testid="stChatInput"] input {{
+    padding: 12px !important;
+    margin: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+}}
+
+/* Fix submit button alignment */
+div[data-testid="stChatInput"] button {{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 42px !important;
+    width: 42px !important;
+}}
+
+/* Target the SVG icon inside the button */
+div[data-testid="stChatInput"] button svg {{
+    display: block !important;
+    margin: auto !important;
+}}
 </style>
 """,
     unsafe_allow_html=True,
@@ -520,6 +552,8 @@ def main():
     /* Ensure chat input and buttons remain readable */
     .stButton > button {
         font-size: 16px !important;
+        padding: 8px !important;
+        margin: 5px !important;
     }
     /* Ensure messages are readable */
     .message {
@@ -530,11 +564,26 @@ def main():
         margin-top: 15px !important;
     }
     /* Make the Tarot button smaller on mobile using the exact class name */
-    div.stVerticalBlock button,
-    div.stHorizontalBlock button {
+    div.stVerticalBlock button#tarot_btn, 
+    div.stHorizontalBlock button#tarot_btn {
         width: 120px !important;
         padding: 4px !important;
         font-size: 10px !important;
+    }
+    
+    /* Style for the submit button in text input field */
+    div[data-testid="stChatInput"] button {
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        line-height: 1 !important;
+        font-size: 10px !important;
+    }
+    
+    div[data-testid="stChatInput"] button svg {
+        display: block !important;
+        margin: auto !important;
     }
     /* Decrease space between elements */
     div.stVerticalBlock,
