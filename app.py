@@ -42,6 +42,10 @@ encoded_avatar = get_base64_image(avatar_path)
 intro_path = "assets/IntroduçãoEKO.png"
 encoded_intro = get_base64_image(intro_path)
 
+# Load banner image for the bottom
+banner_path = "assets/regua_de_logos-EKO_Prancheta1.png"
+encoded_banner = get_base64_image(banner_path)
+
 if "action_taken" not in st.session_state:
     st.session_state["action_taken"] = False
 
@@ -617,6 +621,12 @@ def main():
             text-align: center !important;
             margin-bottom: 15px !important;
         }
+        
+        /* Add specific left margin to Tarot button */
+        button#tarot_btn {
+            margin-left: calc(auto + 10px) !important;
+            transform: translateX(10px) !important;
+        }
         </style>
         """,
             unsafe_allow_html=True,
@@ -654,6 +664,40 @@ def main():
                     handle_message(tarot_request)
 
             st.rerun()
+
+    # Add banner at the bottom (fixed position)
+    if encoded_banner:
+        st.markdown(
+            f"""
+            <style>
+            .footer-banner {{                
+                position: fixed;
+                bottom: -150px;
+                left: -17px;
+                width: 100%;
+                text-align: center;
+                z-index: 999;
+                display: flex;
+                justify-content: center;
+                padding-bottom: -20px;
+            }}
+            .banner-image {{                
+                max-width: 460px;
+                height: auto;
+                transform: translateX(32px); /* Shift to the right to match screenshot */
+            }}
+            @media (max-width: 768px) {{
+                .banner-image {{
+                    max-width: 300px;
+                }}
+            }}
+            </style>
+            <div class="footer-banner">
+                <img src="data:image/png;base64,{encoded_banner}" alt="Partners" class="banner-image" />
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 if __name__ == "__main__":
