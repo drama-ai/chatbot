@@ -620,12 +620,15 @@ def main():
         div.row-widget.stButton {
             text-align: center !important;
             margin-bottom: 15px !important;
+            width: 100% !important;
+            display: flex !important;
+            justify-content: center !important;
         }
         
         /* Ensure proper centering for Tarot button */
         button#tarot_btn {
-            margin-left: auto !important;
-            margin-right: auto !important;
+            margin: 0 auto !important;
+            width: 200px !important;
             display: block !important;
         }
         </style>
@@ -633,9 +636,9 @@ def main():
             unsafe_allow_html=True,
         )
 
-        # Use a centered column for the button
-        col1, col2, col3 = st.columns([0.4, 0.2, 0.4])
-        with col2:
+        # Remove the column-based approach and use a single centered container
+        tarot_container = st.container()
+        with tarot_container:
             tarot_button = st.button("Tirar Tarot", key="tarot_btn")
 
         # Handle user text input
