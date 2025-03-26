@@ -43,7 +43,7 @@ intro_path = "assets/IntroduçãoEKO.png"
 encoded_intro = get_base64_image(intro_path)
 
 # Load banner image for the bottom
-banner_path = "assets/regua_de_logos-EKO_Prancheta1.png"
+banner_path = "assets/regua_de_logos-EKO_Prancheta2.png"
 encoded_banner = get_base64_image(banner_path)
 
 if "action_taken" not in st.session_state:
@@ -676,19 +676,23 @@ def main():
             <style>
             .footer-banner {{                
                 position: fixed;
-                bottom: -150px;
-                left: -17px;
+                bottom: 0;
+                left: 0;
                 width: 100%;
                 text-align: center;
                 z-index: 999;
                 display: flex;
                 justify-content: center;
-                padding-bottom: -20px;
+                padding: 0;
+                margin-top: 100px;
+                line-height: 0;
             }}
             .banner-image {{                
                 max-width: 460px;
                 height: auto;
-                transform: translateX(32px); /* Shift to the right to match screenshot */
+                vertical-align: bottom;
+                display: block;
+                transform: translateY(-20px);
             }}
             @media (max-width: 768px) {{
                 .banner-image {{
