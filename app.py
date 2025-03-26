@@ -622,10 +622,11 @@ def main():
             margin-bottom: 15px !important;
         }
         
-        /* Add specific left margin to Tarot button */
+        /* Ensure proper centering for Tarot button */
         button#tarot_btn {
-            margin-left: calc(auto + 10px) !important;
-            transform: translateX(10px) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            display: block !important;
         }
         </style>
         """,
